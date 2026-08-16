@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="pageTitle">지우 할아버지의 달력</title>
+<style>
+  * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
+  body { 
+    max-width: 950px; 
+    margin: 20px auto; 
+    padding: 10px; 
+    background-color: #f0f2f5;
+  }
+  
+  .main-container {
+    position: relative;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    background-color: #ffffff;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    overflow: hidden;
+  }
+  
+  .main-container::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255, 255, 255, 0.75);
+    z-index: 1;
+  }
+  
+  .content-wrapper {
+    position: relative;
+    z-index: 2;
+  }
+  
+  .title-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 0;
+    margin-bottom: 15px;
+  }
+
+  .main-title {
+    margin: 0;
+    font-size: 1.8rem;
+    color: #1a252f;
+    font-weight: bold;
+  }
+  
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+  .header h3 { margin: 0; font-size: 1.4rem; color: #2c3e50; }
+  .btn { padding: 6px 14px; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 6px; font-size: 0.9rem; font-weight: 500; }
+  .btn:hover { background: #f8f9fa; }
+  
+  .bg-control {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+  }
+  
+  .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .day-header { text-align: center; font-weight: bold; padding: 8px; background: rgba(240, 242, 245, 0.85); border-radius: 6px; }
+  .day-header.sun { color: #d9534f; } .day-header.sat { color: #0275d8; }
+  
+  .cell { 
+    background: rgba(255, 255, 255, 0.85); 
+    border: 1px solid rgba(0, 0, 0, 0.1); 
+    min-height: 110px; 
+    padding: 6px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    display: flex; 
+    flex-direction: column; 
+    transition: all 0.2s;
+  }
+  .cell:hover { border-color: #007bff; background: rgba(255, 255, 255, 0.98); }
+  
+  .date-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .date-num { font-weight: bold; font-size: 1.1rem; transition: color 0.2s, text-shadow 0.2s; }
+  .lunar-num { font-size: 0.75rem; color: #666; font-weight: normal; }
+  
+  .cell.sun .date-num { color: #d9534f; } .cell.sat .date-num { color: #0275d8; }
+  
+  .cell.has-memo .date-num {
+    color: #00e676 !important;
+    text-shadow: 0 0 6px rgba(0, 230, 118, 0.8), 0 0 10px rgba(0, 230, 118, 0.5);
+    background-color: #111;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  
+  .memo-item { margin-top: 3px; padding: 4px; border-radius: 4px; font-size: 0.8rem; word-break: break-all; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 100; }
+  .modal-content { background: #fff; padding: 20px; border-radius: 8px; width: 340px; }
+  .modal-content h3 { margin-top: 0; }
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 0.85rem; margin-bottom: 4px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
+  .color-picker { display: flex; gap: 10px; }
+  .color-picker input { width: 50%; height: 35px; cursor: pointer; }
+  .modal-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; }
+</style>
+</head>
+<body>
+  
+<div class="main-container" id="mainContainer">
+  <div class="content-wrapper">
+    <div class="title-area">
+      <h1 class="main-title" id="calendarTitle">지우 할아버지의 달력</h1>
+      <button class="btn" onclick="changeCalendarName()" style="font-size: 0.8rem;">✏️ 이름 변경</button>
+    </div>
+  
+    <div class="bg-control">
+      <label for="bgUpload" class="btn">🖼️ 달력 밑그림 사진 선택</label>
+      <input type="file" id="bgUpload" accept="image/*" style="display:none;" onchange="uploadBackground(event)">
+      <button class="btn" onclick="removeBackground()">사진 삭제</button>
+      <button class="btn" id="btnRestoreBg" onclick="restoreBackground()" style="display:none; color:#28a745; font-weight:bold;">↩️ 이전 사진으로 복원</button>
+    </div>
+  
+    <div class="header">
+      <button class="btn" onclick="moveMonth(-1)">◀ 이전달</button>
+      <h3 id="monthTitle"></h3>
+      <button class="btn" onclick="moveMonth(1)">다음달 ▶</button>
+    </div>
+  
+    <div class="calendar" id="calendar"></div>
+  </div>
+</div>
+  
+<div class="modal" id="memoModal">
+  <div class="modal-content">
+    <h3 id="modalDateTitle">일정 등록</h3>
+    <div class="form-group">
+      <label>내용</label>
+      <textarea id="memoText" rows="3" placeholder="메모할 내용을 입력하세요"></textarea>
+    </div>
+    <div class="form-group">
+      <label>반복 설정</label>
+      <select id="repeatType">
+        <option value="none">반복 없음</option>
+        <option value="monthly">매월 반복</option>
+        <option value="yearly_solar">매년 반복 (양력 기준)</option>
+        <option value="yearly_lunar">매년 반복 (음력 기준)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>알람 설정</label>
+      <div style="display:flex; gap:6px;">
+        <select id="alarmTiming" style="width:40%;">
+          <option value="same_day">당일</option>
+          <option value="1_day_before">하루 전 (1일 전)</option>
+        </select>
+        <input type="time" id="alarmTime" style="width:60%;">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>메모 색상 설정 (글자색 / 배경색)</label>
+      <div class="color-picker">
+        <input type="color" id="textColor" value="#000000">
+        <input type="color" id="bgColor" value="#e3f2fd">
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="deleteMemo()" id="btnDelete" style="display:none; color:red;">삭제</button>
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn" onclick="saveMemo()" style="background:#007bff; color:#fff;">저장</button>
+    </div>
+  </div>
+</div>
+  
+<script>
+// ---------- IndexedDB 대용량 사진 저장소 로직 ----------
+let db;
+const dbReq = indexedDB.open("CalendarImageDB", 1);
+
+dbReq.onupgradeneeded = function(e) {
+  db = e.target.result;
+  if (!db.objectStoreNames.contains("images")) {
+    db.createObjectStore("images");
+  }
+};
+
+dbReq.onsuccess = function(e) {
+  db = e.target.result;
+  loadStoredImages();
+};
+
+dbReq.onerror = function(e) {
+  console.error("IndexedDB 에러:", e);
+};
+
+function saveImageToDB(key, fileOrData) {
+  if (!db) return;
+  const tx = db.transaction("images", "readwrite");
+  const store = tx.objectStore("images");
+  store.put(fileOrData, key);
+}
+
+function getImageFromDB(key, callback) {
+  if (!db) return;
+  const tx = db.transaction("images", "readonly");
+  const store = tx.objectStore("images");
+  const req = store.get(key);
+  req.onsuccess = function() {
+    callback(req.result);
+  };
+}
+
+function deleteImageFromDB(key) {
+  if (!db) return;
+  const tx = db.transaction("images", "readwrite");
+  const store = tx.objectStore("images");
+  store.delete(key);
+}
+
+function loadStoredImages() {
+  getImageFromDB("current_bg", function(data) {
+    if (data) {
+      applyBgToContainer(data);
+    }
+  });
+
+  getImageFromDB("backup_bg", function(data) {
+    if (data) {
+      document.getElementById('btnRestoreBg').style.display = 'inline-block';
+    }
+  });
+}
+
+function applyBgToContainer(data) {
+  const container = document.getElementById('mainContainer');
+  if (typeof data === 'string') {
+    container.style.backgroundImage = `url(${data})`;
+  } else if (data instanceof Blob || data instanceof File) {
+    const url = URL.createObjectURL(data);
+    container.style.backgroundImage = `url(${url})`;
+  }
+}
+
+// --------------------------------------------------------
+
+function getLunarObj(year, month, day) {
+  try {
+    const date = new Date(year, month - 1, day);
+    const formatter = new Intl.DateTimeFormat('ko-KR-u-ca-chinese', {
+      month: 'numeric',
+      day: 'numeric'
+    });
+    const parts = formatter.formatToParts(date);
+    let lMonth = 0, lDay = 0;
+    for (const part of parts) {
+      if (part.type === 'month') lMonth = parseInt(part.value.replace(/[^0-9]/g, ''), 10);
+      if (part.type === 'day') lDay = parseInt(part.value.replace(/[^0-9]/g, ''), 10);
+    }
+    return { month: lMonth, day: lDay, str: `${lMonth}.${lDay}` };
+  } catch (e) {
+    return { month: 0, day: 0, str: '' };
+  }
+}
+  
+let currentYear = 2026;
+let currentMonth = 7; 
+let selectedDateKey = '';
+let selectedMemoId = null;
+
+function changeCalendarName() {
+  const currentName = document.getElementById('calendarTitle').innerText;
+  const newName = prompt('사용하실 달력 이름을 입력하세요:', currentName);
+  if (newName !== null && newName.trim() !== '') {
+    const trimmedName = newName.trim();
+    document.getElementById('calendarTitle').innerText = trimmedName;
+    document.getElementById('pageTitle').innerText = trimmedName;
+    localStorage.setItem('my_calendar_title', trimmedName);
+  }
+}
+
+const defaultEvents2026 = [
+  { id: 1001, date: '2026-01-01', text: '🔴 신정', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1002, date: '2026-02-16', text: '🔴 설 연휴', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1003, date: '2026-02-17', text: '🔴 설날 (구정)', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1004, date: '2026-02-18', text: '🔴 설 연휴', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1005, date: '2026-03-01', text: '🔴 삼일절', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1006, date: '2026-03-02', text: '🔴 대체공휴일(삼일절)', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
+  { id: 1007, date: '2026-05-05', text: '🔴 어린이날', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1008, date: '2026-05-24', text: '🔴 부처님오신날', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1009, date: '2026-05-25', text: '🔴 대체공휴일(부처님오신날)', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
+  { id: 1010, date: '2026-06-03', text: '🔴 지방선거일', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1011, date: '2026-06-06', text: '🔴 현충일', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1012, date: '2026-08-15', text: '🔴 광복절', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1013, date: '2026-08-17', text: '🔴 대체공휴일(광복절)', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
+  { id: 1014, date: '2026-09-24', text: '🔴 추석 연휴', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1015, date: '2026-09-25', text: '🔴 추석', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1016, date: '2026-09-26', text: '🔴 추석 연휴', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1017, date: '2026-10-03', text: '🔴 개천절', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 1018, date: '2026-10-05', text: '🔴 대체공휴일(개천절)', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
+  { id: 1019, date: '2026-10-09', text: '🔴 한글날', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 2020, date: '2026-12-25', text: '🔴 크리스마스', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
+  { id: 2001, date: '2026-01-05', text: '소한', repeat: 'none', textColor: '#1a5fb4', bgColor: '#e1f5fe' },
+  { id: 2002, date: '2026-01-20', text: '대한', repeat: 'none', textColor: '#1a5fb4', bgColor: '#e1f5fe' },
+  { id: 2003, date: '2026-02-04', text: '입춘', repeat: 'none', textColor: '#26a269', bgColor: '#e8f5e9' },
+  { id: 2004, date: '2026-02-19', text: '우수', repeat: 'none', textColor: '#26a269', bgColor: '#e8f5e9' },
+  { id: 2005, date: '2026-03-05', text: '경칩', repeat: 'none', textColor: '#26a269', bgColor: '#e8f5e9' },
+  { id: 2006, date: '2026-03-20', text: '춘분', repeat: 'none', textColor: '#26a269', bgColor: '#e8f5e9' },
+  { id: 2007, date: '2026-04-05', text: '청명', repeat: 'none', textColor: '#26a269', bgColor: '#e8f5e9' },
+  { id: 2008, date: '2026-04-20', text: '곡우', repeat: 'none', textColor: '#26a269', bgColor: '#e8f5e9' },
+  { id: 2009, date: '2026-05-05', text: '입하', repeat: 'none', textColor: '#e66100', bgColor: '#fff3e0' },
+  { id: 2010, date: '2026-05-21', text: '소만', repeat: 'none', textColor: '#e66100', bgColor: '#fff3e0' },
+  { id: 2011, date: '2026-06-06', text: '망종', repeat: 'none', textColor: '#e66100', bgColor: '#fff3e0' },
+  { id: 2012, date: '2026-06-21', text: '하지', repeat: 'none', textColor: '#e66100', bgColor: '#fff3e0' },
+  { id: 2013, date: '2026-07-07', text: '소서', repeat: 'none', textColor: '#e66100', bgColor: '#fff3e0' },
+  { id: 2014, date: '2026-07-23', text: '대서', repeat: 'none', textColor: '#e66100', bgColor: '#fff3e0' },
+  { id: 2015, date: '2026-08-07', text: '입추', repeat: 'none', textColor: '#986a44', bgColor: '#efebe9' },
+  { id: 2016, date: '2026-08-23', text: '처서', repeat: 'none', textColor: '#986a44', bgColor: '#efebe9' },
+  { id: 2017, date: '2026-09-08', text: '백로', repeat: 'none', textColor: '#986a44', bgColor: '#efebe9' },
+  { id: 2018, date: '2026-09-23', text: '추분', repeat: 'none', textColor: '#986a44', bgColor: '#efebe9' },
+  { id: 2019, date: '2026-10-08', text: '한로', repeat: 'none', textColor: '#986a44', bgColor: '#efebe9' },
+  { id: 2020, date: '2026-10-23', text: '상강', repeat: 'none', textColor: '#986a44', bgColor: '#efebe9' },
+  { id: 2021, date: '2026-11-07', text: '입동', repeat: 'none', textColor: '#1a5fb4', bgColor: '#e1f5fe' },
+  { id: 2022, date: '2026-11-22', text: '소설', repeat: 'none', textColor: '#1a5fb4', bgColor: '#e1f5fe' },
+  { id: 2023, date: '2026-12-07', text: '대설', repeat: 'none', textColor: '#1a5fb4', bgColor: '#e1f5fe' },
+  { id: 2024, date: '2026-12-22', text: '동지', repeat: 'none', textColor: '#1a5fb4', bgColor: '#e1f5fe' },
+  { id: 3001, date: '2026-07-15', text: '🔥 초복', repeat: 'none', textColor: '#a51d2d', bgColor: '#ffebee' },
+  { id: 3002, date: '2026-07-25', text: '🔥 중복', repeat: 'none', textColor: '#a51d2d', bgColor: '#ffebee' },
+  { id: 3003, date: '2026-08-14', text: '🔥 말복', repeat: 'none', textColor: '#a51d2d', bgColor: '#ffebee' }
+];
+
+let localSaved = localStorage.getItem('my_calendar_memos');
+let memos = localSaved ? JSON.parse(localSaved) : [];
+
+defaultEvents2026.forEach(item => {
+  if (!memos.some(m => m.id === item.id)) {
+    memos.push(item);
+  }
+});
+
+const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
+
+function uploadBackground(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  getImageFromDB("current_bg", function(oldData) {
+    if (oldData) {
+      saveImageToDB("backup_bg", oldData);
+      document.getElementById('btnRestoreBg').style.display = 'inline-block';
+    }
+    
+    saveImageToDB("current_bg", file);
+    applyBgToContainer(file);
+    alert('고화질 사진이 원본 그대로 성공적으로 적용되었습니다!');
+    e.target.value = '';
+  });
+}
+
+function removeBackground() {
+  getImageFromDB("current_bg", function(data) {
+    if (data) {
+      saveImageToDB("backup_bg", data);
+      deleteImageFromDB("current_bg");
+      document.getElementById('mainContainer').style.backgroundImage = '';
+      document.getElementById('btnRestoreBg').style.display = 'inline-block';
+      alert('배경 사진이 삭제되었습니다. 실수로 삭제하셨다면 [이전 사진으로 복원]을 누르세요.');
+    } else {
+      alert('삭제할 배경 사진이 없습니다.');
+    }
+  });
+}
+
+function restoreBackground() {
+  getImageFromDB("backup_bg", function(backupData) {
+    if (backupData) {
+      saveImageToDB("current_bg", backupData);
+      deleteImageFromDB("backup_bg");
+      applyBgToContainer(backupData);
+      document.getElementById('btnRestoreBg').style.display = 'none';
+      alert('이전 배경 사진으로 복원되었습니다!');
+    }
+  });
+}
+
+function initCalendar() {
+  const container = document.getElementById('calendar');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  document.getElementById('monthTitle').innerText = `${currentYear}년 ${currentMonth + 1}월`;
+  
+  daysOfWeek.forEach((day, idx) => {
+    const div = document.createElement('div');
+    div.className = `day-header ${idx===0?'sun':idx===6?'sat':''}`;
+    div.innerText = day;
+    container.appendChild(div);
+  });
+  
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
+  
+  for (let i = 0; i < firstDay; i++) {
+    const emptyCell = document.createElement('div');
+    emptyCell.className = 'cell';
+    emptyCell.style.background = 'rgba(240,240,240,0.4)';
+    container.appendChild(emptyCell);
+  }
+  
+  for (let date = 1; date <= lastDate; date++) {
+    const cell = document.createElement('div');
+    const dayOfWeek = (firstDay + date - 1) % 7;
+    const lunarObj = getLunarObj(currentYear, currentMonth + 1, date);
+    const dayMemos = getMemosForDate(currentYear, currentMonth + 1, date, lunarObj);
+    
+    const hasMemoClass = dayMemos.length > 0 ? 'has-memo' : '';
+    cell.className = `cell ${dayOfWeek===0?'sun':dayOfWeek===6?'sat':''} ${hasMemoClass}`;
+    
+    const dateKey = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
+    
+    cell.innerHTML = `
+      <div class="date-header">
+        <span class="date-num">${date}</span>
+        <span class="lunar-num">(음 ${lunarObj.str})</span>
+      </div>
+    `;
+    
+    cell.onclick = (e) => {
+      if(e.target === cell || e.target.classList.contains('date-num') || e.target.classList.contains('date-header') || e.target.classList.contains('lunar-num')) {
+        openModal(dateKey);
+      }
+    };
+
+    dayMemos.forEach(m => {
+      const item = document.createElement('div');
+      item.className = 'memo-item';
+      item.style.color = m.textColor;
+      item.style.backgroundColor = m.bgColor;
+      
+      let alarmPrefix = '';
+      if (m.alarmTime) {
+        alarmPrefix = (m.alarmTiming === '1_day_before' ? '[1일전 ' : '[') + m.alarmTime + '] ';
+      }
+      
+      item.innerText = alarmPrefix + m.text;
+      item.onclick = (e) => {
+        e.stopPropagation();
+        openModal(dateKey, m.id);
+      };
+      cell.appendChild(item);
+    });
+
+    container.appendChild(cell);
+  }
+}
+
+function getMemosForDate(y, m, d, lunarObj) {
+  return memos.filter(item => {
+    const [iy, im, id] = item.date.split('-').map(Number);
+    if (item.repeat === 'yearly') item.repeat = 'yearly_solar';
+
+    if (item.repeat === 'none') return iy === y && im === m && id === d;
+    if (item.repeat === 'monthly') return id === d;
+    if (item.repeat === 'yearly_solar') return im === m && id === d;
+    if (item.repeat === 'yearly_lunar') {
+      const itemLunar = item.lunarDate || getLunarObj(iy, im, id);
+      return itemLunar.month === lunarObj.month && itemLunar.day === lunarObj.day;
+    }
+    return false;
+  });
+}
+
+function moveMonth(delta) {
+  currentMonth += delta;
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  initCalendar();
+}
+
+function openModal(dateKey, memoId = null) {
+  selectedDateKey = dateKey;
+  selectedMemoId = memoId;
+  document.getElementById('modalDateTitle').innerText = `${dateKey} 일정`;
+  
+  if (memoId) {
+    const target = memos.find(m => m.id === memoId);
+    document.getElementById('memoText').value = target.text;
+    document.getElementById('repeatType').value = target.repeat === 'yearly' ? 'yearly_solar' : target.repeat;
+    document.getElementById('alarmTiming').value = target.alarmTiming || 'same_day';
+    document.getElementById('alarmTime').value = target.alarmTime || '';
+    document.getElementById('textColor').value = target.textColor;
+    document.getElementById('bgColor').value = target.bgColor;
+    document.getElementById('btnDelete').style.display = 'block';
+  } else {
+    document.getElementById('memoText').value = '';
+    document.getElementById('repeatType').value = 'none';
+    document.getElementById('alarmTiming').value = 'same_day';
+    document.getElementById('alarmTime').value = '';
+    document.getElementById('textColor').value = '#000000';
+    document.getElementById('bgColor').value = '#e3f2fd';
+    document.getElementById('btnDelete').style.display = 'none';
+  }
+  document.getElementById('memoModal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('memoModal').style.display = 'none';
+}
+
+function saveMemo() {
+  const text = document.getElementById('memoText').value.trim();
+  if (!text) return alert('내용을 입력해주세요.');
+  
+  const [y, m, d] = selectedDateKey.split('-').map(Number);
+  const lunarObj = getLunarObj(y, m, d);
+  
+  if (selectedMemoId) {
+    const index = memos.findIndex(m => m.id === selectedMemoId);
+    memos[index] = {
+      ...memos[index],
+      text,
+      repeat: document.getElementById('repeatType').value,
+      alarmTiming: document.getElementById('alarmTiming').value,
+      alarmTime: document.getElementById('alarmTime').value,
+      textColor: document.getElementById('textColor').value,
+      bgColor: document.getElementById('bgColor').value,
+      lunarDate: lunarObj
+    };
+  } else {
+    memos.push({
+      id: Date.now(),
+      date: selectedDateKey,
+      text,
+      repeat: document.getElementById('repeatType').value,
+      alarmTiming: document.getElementById('alarmTiming').value,
+      alarmTime: document.getElementById('alarmTime').value,
+      textColor: document.getElementById('textColor').value,
+      bgColor: document.getElementById('bgColor').value,
+      lunarDate: lunarObj
+    });
+  }
+  
+  localStorage.setItem('my_calendar_memos', JSON.stringify(memos));
+  closeModal();
+  initCalendar();
+}
+
+function deleteMemo() {
+  if (confirm('이 메모를 삭제하시겠습니까?')) {
+    memos = memos.filter(m => m.id !== selectedMemoId);
+    localStorage.setItem('my_calendar_memos', JSON.stringify(memos));
+    closeModal();
+    initCalendar();
+  }
+}
+
+window.onload = function() {
+  const savedTitle = localStorage.getItem('my_calendar_title') || '지우 할아버지의 달력';
+  document.getElementById('calendarTitle').innerText = savedTitle;
+  document.getElementById('pageTitle').innerText = savedTitle;
+
+  initCalendar();
+};
+
+// 알람 감지 엔진 (당일 및 하루 전 알람 감지)
+setInterval(() => {
+  const now = new Date();
+  const todayY = now.getFullYear();
+  const todayM = now.getMonth() + 1;
+  const todayD = now.getDate();
+  const lunarObj = getLunarObj(todayY, todayM, todayD);
+  const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  
+  // 내일 날짜 계산
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  const tomY = tomorrow.getFullYear();
+  const tomM = tomorrow.getMonth() + 1;
+  const tomD = tomorrow.getDate();
+  const tomLunarObj = getLunarObj(tomY, tomM, tomD);
+
+  // 1. 당일 알람 체크
+  const todayMemos = getMemosForDate(todayY, todayM, todayD, lunarObj);
+  todayMemos.forEach(item => {
+    const timing = item.alarmTiming || 'same_day';
+    if (timing === 'same_day' && item.alarmTime === currentTime && now.getSeconds() < 10) {
+      alert(`[알람] 오늘 일정: ${item.text}`);
+    }
+  });
+
+  // 2. 하루 전 알람 체크 (내일 일정 중 하루 전 알람 설정된 것)
+  const tomorrowMemos = getMemosForDate(tomY, tomM, tomD, tomLunarObj);
+  tomorrowMemos.forEach(item => {
+    const timing = item.alarmTiming || 'same_day';
+    if (timing === '1_day_before' && item.alarmTime === currentTime && now.getSeconds() < 10) {
+      alert(`[하루 전 알람] 내일 일정: ${item.text}`);
+    }
+  });
+}, 10000);
+</script>
+</body>
+</html>
