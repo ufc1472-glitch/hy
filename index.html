@@ -133,6 +133,17 @@
     overflow: hidden;
   }
   .cell:hover { border-color: #007bff; background: rgba(255, 255, 255, 0.98); }
+
+  /* 오늘 날짜 강조 스타일 */
+  .cell.today {
+    background: #fff9c4 !important; /* 연한 노란색 강조 배경 */
+    border: 2px solid #ff9800 !important; /* 주황색 테두리 */
+    box-shadow: inset 0 0 4px rgba(255, 152, 0, 0.5);
+  }
+  .cell.today .date-num {
+    color: #e65100 !important;
+    font-weight: 900;
+  }
   
   .date-header { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 1px; }
   .date-num { font-weight: bold; font-size: clamp(0.72rem, 3vw, 0.85rem); line-height: 1; }
@@ -313,8 +324,9 @@ function getLunarObj(year, month, day) {
   }
 }
   
-let currentYear = 2026;
-let currentMonth = 7; 
+const todayDate = new Date();
+let currentYear = todayDate.getFullYear();
+let currentMonth = todayDate.getMonth(); 
 let selectedDateKey = '';
 let selectedMemoId = null;
 
@@ -430,6 +442,11 @@ function initCalendar() {
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
   const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
   
+  const now = new Date();
+  const realTodayY = now.getFullYear();
+  const realTodayM = now.getMonth();
+  const realTodayD = now.getDate();
+
   for (let i = 0; i < firstDay; i++) {
     const emptyCell = document.createElement('div');
     emptyCell.className = 'cell';
@@ -449,7 +466,10 @@ function initCalendar() {
     const hasMemoClass = allMemos.length > 0 ? 'has-memo' : '';
     
     const isHoliday = autoHolidays.length > 0;
-    cell.className = `cell ${dayOfWeek===0 || isHoliday ?'sun':dayOfWeek===6?'sat':''} ${hasMemoClass}`;
+    const isToday = (currentYear === realTodayY && currentMonth === realTodayM && date === realTodayD);
+    const todayClass = isToday ? 'today' : '';
+
+    cell.className = `cell ${dayOfWeek===0 || isHoliday ?'sun':dayOfWeek===6?'sat':''} ${hasMemoClass} ${todayClass}`;
     
     const dateKey = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
     
