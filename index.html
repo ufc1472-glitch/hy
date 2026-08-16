@@ -329,35 +329,47 @@ function changeCalendarName() {
   }
 }
 
-const defaultEvents2026 = [
-  { id: 1001, date: '2026-01-01', text: '🔴 신정', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1002, date: '2026-02-16', text: '🔴 설 연휴', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1003, date: '2026-02-17', text: '🔴 설날 (구정)', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1004, date: '2026-02-18', text: '🔴 설 연휴', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1005, date: '2026-03-01', text: '🔴 삼일절', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1006, date: '2026-03-02', text: '🔴 대체공휴일', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
-  { id: 1007, date: '2026-05-05', text: '🔴 어린이날', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1008, date: '2026-05-24', text: '🔴 부처님오신날', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1009, date: '2026-05-25', text: '🔴 대체공휴일', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
-  { id: 1010, date: '2026-06-03', text: '🔴 지방선거일', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1011, date: '2026-06-06', text: '🔴 현충일', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1012, date: '2026-08-15', text: '🔴 광복절', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1013, date: '2026-08-17', text: '🔴 대체공휴일', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
-  { id: 1014, date: '2026-09-24', text: '🔴 추석 연휴', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1015, date: '2026-09-25', text: '🔴 추석', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1016, date: '2026-09-26', text: '🔴 추석 연휴', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1017, date: '2026-10-03', text: '🔴 개천절', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1018, date: '2026-10-05', text: '🔴 대체공휴일', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
-  { id: 1019, date: '2026-10-09', text: '🔴 한글날', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 2020, date: '2026-12-25', text: '🔴 크리스마스', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' }
-];
+function getAutoHolidays(year, month, day, lunarObj) {
+  const holidays = [];
+  const styleRed = { textColor: '#d32f2f', bgColor: '#ffebee' };
+
+  if (month === 1 && day === 1) holidays.push({ text: '🔴 신정', ...styleRed });
+  if (month === 3 && day === 1) holidays.push({ text: '🔴 삼일절', ...styleRed });
+  if (month === 5 && day === 5) holidays.push({ text: '🔴 어린이날', ...styleRed });
+  if (month === 6 && day === 6) holidays.push({ text: '🔴 현충일', ...styleRed });
+  if (month === 8 && day === 15) holidays.push({ text: '🔴 광복절', ...styleRed });
+  if (month === 10 && day === 3) holidays.push({ text: '🔴 개천절', ...styleRed });
+  if (month === 10 && day === 9) holidays.push({ text: '🔴 한글날', ...styleRed });
+  if (month === 12 && day === 25) holidays.push({ text: '🔴 성탄절', ...styleRed });
+
+  if (lunarObj.month === 1) {
+    if (lunarObj.day === 1) holidays.push({ text: '🔴 설날 (구정)', ...styleRed });
+    else if (lunarObj.day === 2) holidays.push({ text: '🔴 설 연휴', ...styleRed });
+  }
+  
+  const prevDate = new Date(year, month - 1, day - 1);
+  const prevLunar = getLunarObj(prevDate.getFullYear(), prevDate.getMonth() + 1, prevDate.getDate());
+  if (prevLunar.month === 1 && prevLunar.day === 1) {
+    holidays.push({ text: '🔴 설 연휴', ...styleRed });
+  }
+
+  if (lunarObj.month === 4 && lunarObj.day === 8) {
+    holidays.push({ text: '🔴 부처님오신날', ...styleRed });
+  }
+
+  if (lunarObj.month === 8) {
+    if (lunarObj.day === 15) holidays.push({ text: '🔴 추석', ...styleRed });
+    else if (lunarObj.day === 16) holidays.push({ text: '🔴 추석 연휴', ...styleRed });
+  }
+  if (prevLunar.month === 8 && prevLunar.day === 15) {
+    holidays.push({ text: '🔴 추석 연휴', ...styleRed });
+  }
+
+  return holidays;
+}
 
 let localSaved = localStorage.getItem('my_calendar_memos');
 let memos = localSaved ? JSON.parse(localSaved) : [];
-
-defaultEvents2026.forEach(item => {
-  if (!memos.some(m => m.id === item.id)) memos.push(item);
-});
 
 const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -429,10 +441,15 @@ function initCalendar() {
     const cell = document.createElement('div');
     const dayOfWeek = (firstDay + date - 1) % 7;
     const lunarObj = getLunarObj(currentYear, currentMonth + 1, date);
-    const dayMemos = getMemosForDate(currentYear, currentMonth + 1, date, lunarObj);
     
-    const hasMemoClass = dayMemos.length > 0 ? 'has-memo' : '';
-    cell.className = `cell ${dayOfWeek===0?'sun':dayOfWeek===6?'sat':''} ${hasMemoClass}`;
+    const userMemos = getMemosForDate(currentYear, currentMonth + 1, date, lunarObj);
+    const autoHolidays = getAutoHolidays(currentYear, currentMonth + 1, date, lunarObj);
+    
+    const allMemos = [...autoHolidays, ...userMemos];
+    const hasMemoClass = allMemos.length > 0 ? 'has-memo' : '';
+    
+    const isHoliday = autoHolidays.length > 0;
+    cell.className = `cell ${dayOfWeek===0 || isHoliday ?'sun':dayOfWeek===6?'sat':''} ${hasMemoClass}`;
     
     const dateKey = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
     
@@ -449,7 +466,7 @@ function initCalendar() {
       }
     };
 
-    dayMemos.forEach(m => {
+    allMemos.forEach(m => {
       const item = document.createElement('div');
       item.className = 'memo-item';
       item.style.color = m.textColor;
@@ -461,10 +478,12 @@ function initCalendar() {
       }
       
       item.innerText = alarmPrefix + m.text;
-      item.onclick = (e) => {
-        e.stopPropagation();
-        openModal(dateKey, m.id);
-      };
+      if (m.id) {
+        item.onclick = (e) => {
+          e.stopPropagation();
+          openModal(dateKey, m.id);
+        };
+      }
       cell.appendChild(item);
     });
 
