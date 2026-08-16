@@ -2,22 +2,22 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title id="pageTitle">지우 할아버지의 달력</title>
 <style>
-  * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
+  * { box-sizing: border-box; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; }
   body { 
     max-width: 950px; 
-    margin: 20px auto; 
-    padding: 10px; 
+    margin: 0 auto; 
+    padding: 8px; 
     background-color: #f0f2f5;
   }
   
   .main-container {
     position: relative;
-    padding: 20px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    padding: 12px 8px;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
     background-color: #ffffff;
     background-size: cover;
     background-position: center;
@@ -42,75 +42,87 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
     margin-top: 0;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
+    flex-wrap: nowrap;
   }
 
   .main-title {
     margin: 0;
-    font-size: 1.8rem;
+    font-size: 1.3rem;
     color: #1a252f;
     font-weight: bold;
+    white-space: nowrap;
   }
   
-  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-  .header h3 { margin: 0; font-size: 1.4rem; color: #2c3e50; }
-  .btn { padding: 6px 14px; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 6px; font-size: 0.9rem; font-weight: 500; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .header h3 { margin: 0; font-size: 1.1rem; color: #2c3e50; }
+  .btn { padding: 4px 8px; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 6px; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
   .btn:hover { background: #f8f9fa; }
   
   .bg-control {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
+    gap: 4px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
     border-bottom: 1px solid rgba(0,0,0,0.1);
+    flex-wrap: wrap;
   }
   
-  .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-  .day-header { text-align: center; font-weight: bold; padding: 8px; background: rgba(240, 242, 245, 0.85); border-radius: 6px; }
+  .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .day-header { text-align: center; font-weight: bold; padding: 4px 0; background: rgba(240, 242, 245, 0.85); border-radius: 4px; font-size: 0.75rem; }
   .day-header.sun { color: #d9534f; } .day-header.sat { color: #0275d8; }
   
   .cell { 
     background: rgba(255, 255, 255, 0.85); 
-    border: 1px solid rgba(0, 0, 0, 0.1); 
-    min-height: 110px; 
-    padding: 6px; 
-    border-radius: 6px; 
+    border: 1px solid rgba(0, 0, 0, 0.08); 
+    min-height: 72px; 
+    padding: 2px; 
+    border-radius: 4px; 
     cursor: pointer; 
     display: flex; 
     flex-direction: column; 
     transition: all 0.2s;
+    overflow: hidden;
   }
   .cell:hover { border-color: #007bff; background: rgba(255, 255, 255, 0.98); }
   
-  .date-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-  .date-num { font-weight: bold; font-size: 1.1rem; transition: color 0.2s, text-shadow 0.2s; }
-  .lunar-num { font-size: 0.75rem; color: #666; font-weight: normal; }
+  .date-header { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 2px; }
+  .date-num { font-weight: bold; font-size: 0.85rem; line-height: 1; transition: color 0.2s, text-shadow 0.2s; }
+  .lunar-num { font-size: 0.6rem; color: #666; font-weight: normal; margin-top: 1px; transform: scale(0.9); transform-origin: left top; }
   
   .cell.sun .date-num { color: #d9534f; } .cell.sat .date-num { color: #0275d8; }
   
   .cell.has-memo .date-num {
     color: #00e676 !important;
-    text-shadow: 0 0 6px rgba(0, 230, 118, 0.8), 0 0 10px rgba(0, 230, 118, 0.5);
+    text-shadow: 0 0 4px rgba(0, 230, 118, 0.8);
     background-color: #111;
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 1px 3px;
+    border-radius: 3px;
   }
   
-  .memo-item { margin-top: 3px; padding: 4px; border-radius: 4px; font-size: 0.8rem; word-break: break-all; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .memo-item { 
+    margin-top: 2px; 
+    padding: 2px 3px; 
+    border-radius: 3px; 
+    font-size: 0.65rem; 
+    word-break: break-all; 
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    line-height: 1.1;
+  }
   
   .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 100; }
-  .modal-content { background: #fff; padding: 20px; border-radius: 8px; width: 340px; }
-  .modal-content h3 { margin-top: 0; }
-  .form-group { margin-bottom: 12px; }
-  .form-group label { display: block; font-size: 0.85rem; margin-bottom: 4px; }
-  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
-  .color-picker { display: flex; gap: 10px; }
-  .color-picker input { width: 50%; height: 35px; cursor: pointer; }
-  .modal-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; }
+  .modal-content { background: #fff; padding: 16px; border-radius: 8px; width: 90%; max-width: 320px; }
+  .modal-content h3 { margin-top: 0; font-size: 1.1rem; }
+  .form-group { margin-bottom: 10px; }
+  .form-group label { display: block; font-size: 0.8rem; margin-bottom: 3px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85rem; }
+  .color-picker { display: flex; gap: 8px; }
+  .color-picker input { width: 50%; height: 32px; cursor: pointer; }
+  .modal-btns { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }
 </style>
 </head>
 <body>
@@ -119,14 +131,14 @@
   <div class="content-wrapper">
     <div class="title-area">
       <h1 class="main-title" id="calendarTitle">지우 할아버지의 달력</h1>
-      <button class="btn" onclick="changeCalendarName()" style="font-size: 0.8rem;">✏️ 이름 변경</button>
+      <button class="btn" onclick="changeCalendarName()">✏️ 변경</button>
     </div>
   
     <div class="bg-control">
-      <label for="bgUpload" class="btn">🖼️ 달력 밑그림 사진 선택</label>
+      <label for="bgUpload" class="btn">🖼️ 배경 사진</label>
       <input type="file" id="bgUpload" accept="image/*" style="display:none;" onchange="uploadBackground(event)">
-      <button class="btn" onclick="removeBackground()">사진 삭제</button>
-      <button class="btn" id="btnRestoreBg" onclick="restoreBackground()" style="display:none; color:#28a745; font-weight:bold;">↩️ 이전 사진으로 복원</button>
+      <button class="btn" onclick="removeBackground()">삭제</button>
+      <button class="btn" id="btnRestoreBg" onclick="restoreBackground()" style="display:none; color:#28a745; font-weight:bold;">↩️ 복원</button>
     </div>
   
     <div class="header">
@@ -158,11 +170,11 @@
     <div class="form-group">
       <label>알람 설정</label>
       <div style="display:flex; gap:6px;">
-        <select id="alarmTiming" style="width:40%;">
+        <select id="alarmTiming" style="width:45%;">
           <option value="same_day">당일</option>
           <option value="1_day_before">하루 전 (1일 전)</option>
         </select>
-        <input type="time" id="alarmTime" style="width:60%;">
+        <input type="time" id="alarmTime" style="width:55%;">
       </div>
     </div>
     <div class="form-group">
@@ -181,7 +193,7 @@
 </div>
   
 <script>
-// ---------- IndexedDB 대용량 사진 저장소 로직 ----------
+// IndexedDB 사진 저장소
 let db;
 const dbReq = indexedDB.open("CalendarImageDB", 1);
 
@@ -195,10 +207,6 @@ dbReq.onupgradeneeded = function(e) {
 dbReq.onsuccess = function(e) {
   db = e.target.result;
   loadStoredImages();
-};
-
-dbReq.onerror = function(e) {
-  console.error("IndexedDB 에러:", e);
 };
 
 function saveImageToDB(key, fileOrData) {
@@ -227,15 +235,11 @@ function deleteImageFromDB(key) {
 
 function loadStoredImages() {
   getImageFromDB("current_bg", function(data) {
-    if (data) {
-      applyBgToContainer(data);
-    }
+    if (data) applyBgToContainer(data);
   });
 
   getImageFromDB("backup_bg", function(data) {
-    if (data) {
-      document.getElementById('btnRestoreBg').style.display = 'inline-block';
-    }
+    if (data) document.getElementById('btnRestoreBg').style.display = 'inline-block';
   });
 }
 
@@ -249,15 +253,10 @@ function applyBgToContainer(data) {
   }
 }
 
-// --------------------------------------------------------
-
 function getLunarObj(year, month, day) {
   try {
     const date = new Date(year, month - 1, day);
-    const formatter = new Intl.DateTimeFormat('ko-KR-u-ca-chinese', {
-      month: 'numeric',
-      day: 'numeric'
-    });
+    const formatter = new Intl.DateTimeFormat('ko-KR-u-ca-chinese', { month: 'numeric', day: 'numeric' });
     const parts = formatter.formatToParts(date);
     let lMonth = 0, lDay = 0;
     for (const part of parts) {
@@ -292,57 +291,28 @@ const defaultEvents2026 = [
   { id: 1003, date: '2026-02-17', text: '🔴 설날 (구정)', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
   { id: 1004, date: '2026-02-18', text: '🔴 설 연휴', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
   { id: 1005, date: '2026-03-01', text: '🔴 삼일절', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1006, date: '2026-03-02', text: '🔴 대체공휴일(삼일절)', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
+  { id: 1006, date: '2026-03-02', text: '🔴 대체공휴일', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
   { id: 1007, date: '2026-05-05', text: '🔴 어린이날', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
   { id: 1008, date: '2026-05-24', text: '🔴 부처님오신날', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1009, date: '2026-05-25', text: '🔴 대체공휴일(부처님오신날)', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
+  { id: 1009, date: '2026-05-25', text: '🔴 대체공휴일', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
   { id: 1010, date: '2026-06-03', text: '🔴 지방선거일', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
   { id: 1011, date: '2026-06-06', text: '🔴 현충일', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
   { id: 1012, date: '2026-08-15', text: '🔴 광복절', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1013, date: '2026-08-17', text: '🔴 대체공휴일(광복절)', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
+  { id: 1013, date: '2026-08-17', text: '🔴 대체공휴일', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
   { id: 1014, date: '2026-09-24', text: '🔴 추석 연휴', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
   { id: 1015, date: '2026-09-25', text: '🔴 추석', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
   { id: 1016, date: '2026-09-26', text: '🔴 추석 연휴', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
   { id: 1017, date: '2026-10-03', text: '🔴 개천절', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 1018, date: '2026-10-05', text: '🔴 대체공휴일(개천절)', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
+  { id: 1018, date: '2026-10-05', text: '🔴 대체공휴일', repeat: 'none', textColor: '#c2185b', bgColor: '#fce4ec' },
   { id: 1019, date: '2026-10-09', text: '🔴 한글날', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 2020, date: '2026-12-25', text: '🔴 크리스마스', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' },
-  { id: 2001, date: '2026-01-05', text: '소한', repeat: 'none', textColor: '#1a5fb4', bgColor: '#e1f5fe' },
-  { id: 2002, date: '2026-01-20', text: '대한', repeat: 'none', textColor: '#1a5fb4', bgColor: '#e1f5fe' },
-  { id: 2003, date: '2026-02-04', text: '입춘', repeat: 'none', textColor: '#26a269', bgColor: '#e8f5e9' },
-  { id: 2004, date: '2026-02-19', text: '우수', repeat: 'none', textColor: '#26a269', bgColor: '#e8f5e9' },
-  { id: 2005, date: '2026-03-05', text: '경칩', repeat: 'none', textColor: '#26a269', bgColor: '#e8f5e9' },
-  { id: 2006, date: '2026-03-20', text: '춘분', repeat: 'none', textColor: '#26a269', bgColor: '#e8f5e9' },
-  { id: 2007, date: '2026-04-05', text: '청명', repeat: 'none', textColor: '#26a269', bgColor: '#e8f5e9' },
-  { id: 2008, date: '2026-04-20', text: '곡우', repeat: 'none', textColor: '#26a269', bgColor: '#e8f5e9' },
-  { id: 2009, date: '2026-05-05', text: '입하', repeat: 'none', textColor: '#e66100', bgColor: '#fff3e0' },
-  { id: 2010, date: '2026-05-21', text: '소만', repeat: 'none', textColor: '#e66100', bgColor: '#fff3e0' },
-  { id: 2011, date: '2026-06-06', text: '망종', repeat: 'none', textColor: '#e66100', bgColor: '#fff3e0' },
-  { id: 2012, date: '2026-06-21', text: '하지', repeat: 'none', textColor: '#e66100', bgColor: '#fff3e0' },
-  { id: 2013, date: '2026-07-07', text: '소서', repeat: 'none', textColor: '#e66100', bgColor: '#fff3e0' },
-  { id: 2014, date: '2026-07-23', text: '대서', repeat: 'none', textColor: '#e66100', bgColor: '#fff3e0' },
-  { id: 2015, date: '2026-08-07', text: '입추', repeat: 'none', textColor: '#986a44', bgColor: '#efebe9' },
-  { id: 2016, date: '2026-08-23', text: '처서', repeat: 'none', textColor: '#986a44', bgColor: '#efebe9' },
-  { id: 2017, date: '2026-09-08', text: '백로', repeat: 'none', textColor: '#986a44', bgColor: '#efebe9' },
-  { id: 2018, date: '2026-09-23', text: '추분', repeat: 'none', textColor: '#986a44', bgColor: '#efebe9' },
-  { id: 2019, date: '2026-10-08', text: '한로', repeat: 'none', textColor: '#986a44', bgColor: '#efebe9' },
-  { id: 2020, date: '2026-10-23', text: '상강', repeat: 'none', textColor: '#986a44', bgColor: '#efebe9' },
-  { id: 2021, date: '2026-11-07', text: '입동', repeat: 'none', textColor: '#1a5fb4', bgColor: '#e1f5fe' },
-  { id: 2022, date: '2026-11-22', text: '소설', repeat: 'none', textColor: '#1a5fb4', bgColor: '#e1f5fe' },
-  { id: 2023, date: '2026-12-07', text: '대설', repeat: 'none', textColor: '#1a5fb4', bgColor: '#e1f5fe' },
-  { id: 2024, date: '2026-12-22', text: '동지', repeat: 'none', textColor: '#1a5fb4', bgColor: '#e1f5fe' },
-  { id: 3001, date: '2026-07-15', text: '🔥 초복', repeat: 'none', textColor: '#a51d2d', bgColor: '#ffebee' },
-  { id: 3002, date: '2026-07-25', text: '🔥 중복', repeat: 'none', textColor: '#a51d2d', bgColor: '#ffebee' },
-  { id: 3003, date: '2026-08-14', text: '🔥 말복', repeat: 'none', textColor: '#a51d2d', bgColor: '#ffebee' }
+  { id: 2020, date: '2026-12-25', text: '🔴 크리스마스', repeat: 'none', textColor: '#d32f2f', bgColor: '#ffebee' }
 ];
 
 let localSaved = localStorage.getItem('my_calendar_memos');
 let memos = localSaved ? JSON.parse(localSaved) : [];
 
 defaultEvents2026.forEach(item => {
-  if (!memos.some(m => m.id === item.id)) {
-    memos.push(item);
-  }
+  if (!memos.some(m => m.id === item.id)) memos.push(item);
 });
 
 const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
@@ -356,10 +326,9 @@ function uploadBackground(e) {
       saveImageToDB("backup_bg", oldData);
       document.getElementById('btnRestoreBg').style.display = 'inline-block';
     }
-    
     saveImageToDB("current_bg", file);
     applyBgToContainer(file);
-    alert('고화질 사진이 원본 그대로 성공적으로 적용되었습니다!');
+    alert('사진이 적용되었습니다!');
     e.target.value = '';
   });
 }
@@ -371,9 +340,7 @@ function removeBackground() {
       deleteImageFromDB("current_bg");
       document.getElementById('mainContainer').style.backgroundImage = '';
       document.getElementById('btnRestoreBg').style.display = 'inline-block';
-      alert('배경 사진이 삭제되었습니다. 실수로 삭제하셨다면 [이전 사진으로 복원]을 누르세요.');
-    } else {
-      alert('삭제할 배경 사진이 없습니다.');
+      alert('배경 사진이 삭제되었습니다.');
     }
   });
 }
@@ -428,7 +395,7 @@ function initCalendar() {
     cell.innerHTML = `
       <div class="date-header">
         <span class="date-num">${date}</span>
-        <span class="lunar-num">(음 ${lunarObj.str})</span>
+        <span class="lunar-num">(${lunarObj.str})</span>
       </div>
     `;
     
@@ -569,7 +536,6 @@ window.onload = function() {
   initCalendar();
 };
 
-// 알람 감지 엔진 (당일 및 하루 전 알람 감지)
 setInterval(() => {
   const now = new Date();
   const todayY = now.getFullYear();
@@ -578,7 +544,6 @@ setInterval(() => {
   const lunarObj = getLunarObj(todayY, todayM, todayD);
   const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   
-  // 내일 날짜 계산
   const tomorrow = new Date(now);
   tomorrow.setDate(now.getDate() + 1);
   const tomY = tomorrow.getFullYear();
@@ -586,7 +551,6 @@ setInterval(() => {
   const tomD = tomorrow.getDate();
   const tomLunarObj = getLunarObj(tomY, tomM, tomD);
 
-  // 1. 당일 알람 체크
   const todayMemos = getMemosForDate(todayY, todayM, todayD, lunarObj);
   todayMemos.forEach(item => {
     const timing = item.alarmTiming || 'same_day';
@@ -595,7 +559,6 @@ setInterval(() => {
     }
   });
 
-  // 2. 하루 전 알람 체크 (내일 일정 중 하루 전 알람 설정된 것)
   const tomorrowMemos = getMemosForDate(tomY, tomM, tomD, tomLunarObj);
   tomorrowMemos.forEach(item => {
     const timing = item.alarmTiming || 'same_day';
