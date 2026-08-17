@@ -134,14 +134,13 @@
   }
   .cell:hover { border-color: #007bff; background: rgba(255, 255, 255, 0.98); }
 
-  /* 오늘 날짜 강조 스타일 */
   .cell.today {
-    background: #fff9c4 !important; /* 연한 노란색 강조 배경 */
-    border: 2px solid #ff9800 !important; /* 주황색 테두리 */
-    box-shadow: inset 0 0 4px rgba(255, 152, 0, 0.5);
+    background: #e8f0fe !important;
+    border: 2px solid #1a73e8 !important;
+    box-shadow: inset 0 0 4px rgba(26, 115, 232, 0.3);
   }
   .cell.today .date-num {
-    color: #e65100 !important;
+    color: #1a73e8 !important;
     font-weight: 900;
   }
   
@@ -323,7 +322,81 @@ function getLunarObj(year, month, day) {
     return { month: 0, day: 0, str: '' };
   }
 }
-  
+
+function getSolarTermDay(year, termIndex) {
+  const C = [
+    5.4055, 20.12, 4.6295, 19.4599, 5.8592, 20.646, 4.81, 20.1,
+    5.52, 21.04, 5.678, 21.37, 7.108, 22.83, 7.446, 23.13,
+    7.5, 23.042, 8.318, 23.438, 7.436, 22.36, 7.18, 21.94
+  ];
+  const y = year % 100;
+  return Math.floor(y * 0.2422 + C[termIndex]) - Math.floor((y - 1) / 4);
+}
+
+function getSambokDates(year) {
+  const hajiDay = getSolarTermDay(year, 11);
+  const ipchuDay = getSolarTermDay(year, 14);
+
+  const hajiDate = Date.UTC(year, 5, hajiDay);
+  const ipchuDate = Date.UTC(year, 7, ipchuDay);
+
+  const baseGengUTC = Date.UTC(2024, 0, 7);
+
+  const getNextGengDayUTC = (fromUTC, count) => {
+    let cur = fromUTC;
+    let gengCount = 0;
+    while (true) {
+      const diffDays = Math.round((cur - baseGengUTC) / 86400000);
+      if (diffDays % 10 === 0) {
+        gengCount++;
+        if (gengCount === count) {
+          const d = new Date(cur);
+          return { m: d.getUTCMonth() + 1, d: d.getUTCDate() };
+        }
+      }
+      cur += 86400000;
+    }
+  };
+
+  const chobok = getNextGengDayUTC(hajiDate, 3);
+  const jungbok = getNextGengDayUTC(hajiDate, 4);
+  const malbok = getNextGengDayUTC(ipchuDate, 1);
+
+  return { chobok, jungbok, malbok };
+}
+
+function getSolarTermAndSambok(year, month, day) {
+  const termNames = [
+    "소한", "대한", "입춘", "우수", "경칩", "춘분", "청명", "곡우",
+    "입하", "소만", "망종", "하지", "소서", "대서", "입추", "처서",
+    "백로", "추분", "한로", "상강", "입동", "소설", "대설", "동지"
+  ];
+  const styleGreen = { textColor: '#1b5e20', bgColor: '#e8f5e9' };
+  const styleOrange = { textColor: '#e65100', bgColor: '#fff3e0' };
+  const results = [];
+
+  const mIdx = (month - 1) * 2;
+  const day1 = getSolarTermDay(year, mIdx);
+  const day2 = getSolarTermDay(year, mIdx + 1);
+
+  if (day === day1) results.push({ text: `🌿 ${termNames[mIdx]}`, ...styleGreen });
+  if (day === day2) results.push({ text: `🌿 ${termNames[mIdx + 1]}`, ...styleGreen });
+
+  const { chobok, jungbok, malbok } = getSambokDates(year);
+
+  if (chobok.m === month && chobok.d === day) {
+    results.push({ text: '🐔 초복', ...styleOrange });
+  }
+  if (jungbok.m === month && jungbok.d === day) {
+    results.push({ text: '🐔 중복', ...styleOrange });
+  }
+  if (malbok.m === month && malbok.d === day) {
+    results.push({ text: '🐔 말복', ...styleOrange });
+  }
+
+  return results;
+}
+
 const todayDate = new Date();
 let currentYear = todayDate.getFullYear();
 let currentMonth = todayDate.getMonth(); 
@@ -341,6 +414,7 @@ function changeCalendarName() {
   }
 }
 
+// 명절 및 공휴일 자동 계산 로직 (중복 완벽 방지)
 function getAutoHolidays(year, month, day, lunarObj) {
   const holidays = [];
   const styleRed = { textColor: '#d32f2f', bgColor: '#ffebee' };
@@ -354,27 +428,30 @@ function getAutoHolidays(year, month, day, lunarObj) {
   if (month === 10 && day === 9) holidays.push({ text: '🔴 한글날', ...styleRed });
   if (month === 12 && day === 25) holidays.push({ text: '🔴 성탄절', ...styleRed });
 
+  // 설날 계산
   if (lunarObj.month === 1) {
-    if (lunarObj.day === 1) holidays.push({ text: '🔴 설날 (구정)', ...styleRed });
+    if (lunarObj.day === 1) holidays.push({ text: '🔴 설날', ...styleRed });
     else if (lunarObj.day === 2) holidays.push({ text: '🔴 설 연휴', ...styleRed });
-  }
-  
-  const prevDate = new Date(year, month - 1, day - 1);
-  const prevLunar = getLunarObj(prevDate.getFullYear(), prevDate.getMonth() + 1, prevDate.getDate());
-  if (prevLunar.month === 1 && prevLunar.day === 1) {
-    holidays.push({ text: '🔴 설 연휴', ...styleRed });
+  } else {
+    const nextDate = new Date(year, month - 1, day + 1);
+    const nextLunar = getLunarObj(nextDate.getFullYear(), nextDate.getMonth() + 1, nextDate.getDate());
+    if (nextLunar.month === 1 && nextLunar.day === 1) {
+      holidays.push({ text: '🔴 설 연휴', ...styleRed });
+    }
   }
 
+  // 부처님오신날
   if (lunarObj.month === 4 && lunarObj.day === 8) {
     holidays.push({ text: '🔴 부처님오신날', ...styleRed });
   }
 
+  // 추석 계산 (중복 로직 제거)
   if (lunarObj.month === 8) {
-    if (lunarObj.day === 15) holidays.push({ text: '🔴 추석', ...styleRed });
-    else if (lunarObj.day === 16) holidays.push({ text: '🔴 추석 연휴', ...styleRed });
-  }
-  if (prevLunar.month === 8 && prevLunar.day === 15) {
-    holidays.push({ text: '🔴 추석 연휴', ...styleRed });
+    if (lunarObj.day === 14 || lunarObj.day === 16) {
+      holidays.push({ text: '🔴 추석 연휴', ...styleRed });
+    } else if (lunarObj.day === 15) {
+      holidays.push({ text: '🔴 추석', ...styleRed });
+    }
   }
 
   return holidays;
@@ -459,12 +536,29 @@ function initCalendar() {
     const dayOfWeek = (firstDay + date - 1) % 7;
     const lunarObj = getLunarObj(currentYear, currentMonth + 1, date);
     
-    const userMemos = getMemosForDate(currentYear, currentMonth + 1, date, lunarObj);
+    // 유저 메모 중 절기/공휴일 잔여물 및 중복 내용 전면 제거
+    const userMemos = getMemosForDate(currentYear, currentMonth + 1, date, lunarObj).filter(m => {
+      const t = m.text.replace(/^[^\w\s가-힣]+/, '').trim();
+      return !["초복", "중복", "말복", "백로", "소서", "대서", "추분", "소시", "입추", "추석", "추석 연휴"].includes(t);
+    });
+
     const autoHolidays = getAutoHolidays(currentYear, currentMonth + 1, date, lunarObj);
+    const solarTerms = getSolarTermAndSambok(currentYear, currentMonth + 1, date);
     
-    const allMemos = [...autoHolidays, ...userMemos];
-    const hasMemoClass = allMemos.length > 0 ? 'has-memo' : '';
-    
+    // 동일 텍스트 아이템 최종 필터링
+    const rawAll = [...autoHolidays, ...solarTerms, ...userMemos];
+    const allMemos = [];
+    const seenTexts = new Set();
+
+    for (const m of rawAll) {
+      const cleanText = m.text.replace(/^[^\w\s가-힣]+/, '').trim();
+      if (!seenTexts.has(cleanText)) {
+        seenTexts.add(cleanText);
+        allMemos.push(m);
+      }
+    }
+
+    const hasMemoClass = userMemos.length > 0 ? 'has-memo' : '';
     const isHoliday = autoHolidays.length > 0;
     const isToday = (currentYear === realTodayY && currentMonth === realTodayM && date === realTodayD);
     const todayClass = isToday ? 'today' : '';
