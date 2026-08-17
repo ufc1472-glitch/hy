@@ -307,6 +307,7 @@ function applyBgToContainer(data) {
   }
 }
 
+// 음력 날짜 계산 로직 (2026년 10월 11일 이후 음력 1일 보정 포함)
 function getLunarObj(year, month, day) {
   try {
     const date = new Date(year, month - 1, day);
@@ -317,6 +318,13 @@ function getLunarObj(year, month, day) {
       if (part.type === 'month') lMonth = parseInt(part.value.replace(/[^0-9]/g, ''), 10);
       if (part.type === 'day') lDay = parseInt(part.value.replace(/[^0-9]/g, ''), 10);
     }
+
+    // 2026년 10월 천문연구원 합삭 기준 음력 보정 (10월 11일부터 음력 9월 1일 시작)
+    if (year === 2026 && month === 10 && day >= 11) {
+      lMonth = 9;
+      lDay = day - 10;
+    }
+
     return { month: lMonth, day: lDay, str: `${lMonth}.${lDay}` };
   } catch (e) {
     return { month: 0, day: 0, str: '' };
@@ -414,7 +422,6 @@ function changeCalendarName() {
   }
 }
 
-// 명절 및 공휴일 자동 계산 로직 (중복 완벽 방지)
 function getAutoHolidays(year, month, day, lunarObj) {
   const holidays = [];
   const styleRed = { textColor: '#d32f2f', bgColor: '#ffebee' };
@@ -428,7 +435,6 @@ function getAutoHolidays(year, month, day, lunarObj) {
   if (month === 10 && day === 9) holidays.push({ text: '🔴 한글날', ...styleRed });
   if (month === 12 && day === 25) holidays.push({ text: '🔴 성탄절', ...styleRed });
 
-  // 설날 계산
   if (lunarObj.month === 1) {
     if (lunarObj.day === 1) holidays.push({ text: '🔴 설날', ...styleRed });
     else if (lunarObj.day === 2) holidays.push({ text: '🔴 설 연휴', ...styleRed });
@@ -440,12 +446,10 @@ function getAutoHolidays(year, month, day, lunarObj) {
     }
   }
 
-  // 부처님오신날
   if (lunarObj.month === 4 && lunarObj.day === 8) {
     holidays.push({ text: '🔴 부처님오신날', ...styleRed });
   }
 
-  // 추석 계산 (중복 로직 제거)
   if (lunarObj.month === 8) {
     if (lunarObj.day === 14 || lunarObj.day === 16) {
       holidays.push({ text: '🔴 추석 연휴', ...styleRed });
@@ -536,7 +540,6 @@ function initCalendar() {
     const dayOfWeek = (firstDay + date - 1) % 7;
     const lunarObj = getLunarObj(currentYear, currentMonth + 1, date);
     
-    // 유저 메모 중 절기/공휴일 잔여물 및 중복 내용 전면 제거
     const userMemos = getMemosForDate(currentYear, currentMonth + 1, date, lunarObj).filter(m => {
       const t = m.text.replace(/^[^\w\s가-힣]+/, '').trim();
       return !["초복", "중복", "말복", "백로", "소서", "대서", "추분", "소시", "입추", "추석", "추석 연휴"].includes(t);
@@ -545,7 +548,6 @@ function initCalendar() {
     const autoHolidays = getAutoHolidays(currentYear, currentMonth + 1, date, lunarObj);
     const solarTerms = getSolarTermAndSambok(currentYear, currentMonth + 1, date);
     
-    // 동일 텍스트 아이템 최종 필터링
     const rawAll = [...autoHolidays, ...solarTerms, ...userMemos];
     const allMemos = [];
     const seenTexts = new Set();
@@ -585,13 +587,7 @@ function initCalendar() {
       item.className = 'memo-item';
       item.style.color = m.textColor;
       item.style.backgroundColor = m.bgColor;
-      
-      let alarmPrefix = '';
-      if (m.alarmTime) {
-        alarmPrefix = (m.alarmTiming === '1_day_before' ? '[1일전 ' : '[') + m.alarmTime + '] ';
-      }
-      
-      item.innerText = alarmPrefix + m.text;
+      item.innerText = m.text;
       if (m.id) {
         item.onclick = (e) => {
           e.stopPropagation();
