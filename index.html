@@ -190,6 +190,7 @@
     </div>
   
     <div class="bg-control">
+      <button class="btn" onclick="requestNotificationPermission()" style="color:#007bff; font-weight:bold;">🔔 알람 권한 허용</button>
       <label for="bgUpload" class="btn">🖼️ 배경 사진</label>
       <input type="file" id="bgUpload" accept="image/*" style="display:none;" onchange="uploadBackground(event)">
       <button class="btn" onclick="removeBackground()">삭제</button>
@@ -307,9 +308,19 @@ function applyBgToContainer(data) {
   }
 }
 
-// 음력 날짜 계산 로직 (2026년 10월 11일 이후 음력 1일 보정 포함)
+// 음력 날짜 계산 로직 (기기/OS별 오차 방지)
 function getLunarObj(year, month, day) {
   try {
+    if (year === 2026 && month === 10) {
+      if (day <= 10) {
+        const lDay = 20 + day;
+        return { month: 8, day: lDay, str: `8.${lDay}` };
+      } else {
+        const lDay = day - 10;
+        return { month: 9, day: lDay, str: `9.${lDay}` };
+      }
+    }
+
     const date = new Date(year, month - 1, day);
     const formatter = new Intl.DateTimeFormat('ko-KR-u-ca-chinese', { month: 'numeric', day: 'numeric' });
     const parts = formatter.formatToParts(date);
@@ -317,12 +328,6 @@ function getLunarObj(year, month, day) {
     for (const part of parts) {
       if (part.type === 'month') lMonth = parseInt(part.value.replace(/[^0-9]/g, ''), 10);
       if (part.type === 'day') lDay = parseInt(part.value.replace(/[^0-9]/g, ''), 10);
-    }
-
-    // 2026년 10월 천문연구원 합삭 기준 음력 보정 (10월 11일부터 음력 9월 1일 시작)
-    if (year === 2026 && month === 10 && day >= 11) {
-      lMonth = 9;
-      lDay = day - 10;
     }
 
     return { month: lMonth, day: lDay, str: `${lMonth}.${lDay}` };
@@ -690,6 +695,9 @@ function saveMemo() {
   localStorage.setItem('my_calendar_memos', JSON.stringify(memos));
   closeModal();
   initCalendar();
+  
+  // 알람 설정이 추가되었을 때 푸시 권한 요청
+  requestNotificationPermission();
 }
 
 function deleteMemo() {
@@ -701,6 +709,29 @@ function deleteMemo() {
   }
 }
 
+// 브라우저 푸시 알람 권한 요청
+function requestNotificationPermission() {
+  if ("Notification" in window) {
+    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          alert("알람 권한이 허용되었습니다.");
+        }
+      });
+    } else if (Notification.permission === "granted") {
+      alert("이미 알람 권한이 허용되어 있습니다.");
+    }
+  }
+}
+
+// 실제 알람 실행 함수 (Notification API + alert)
+function triggerAlarm(msg) {
+  if ("Notification" in window && Notification.permission === "granted") {
+    new Notification("📅 달력 알람", { body: msg, icon: '' });
+  }
+  alert(msg);
+}
+
 window.onload = function() {
   const savedTitle = localStorage.getItem('my_calendar_title') || '지우 할아버지의 달력';
   document.getElementById('calendarTitle').innerText = savedTitle;
@@ -708,6 +739,9 @@ window.onload = function() {
 
   initCalendar();
 };
+
+// 알람 중복 실행 방지용 기록 객체
+const notifiedMap = {};
 
 setInterval(() => {
   const now = new Date();
@@ -724,22 +758,32 @@ setInterval(() => {
   const tomD = tomorrow.getDate();
   const tomLunarObj = getLunarObj(tomY, tomM, tomD);
 
+  // 오늘 일정 알람 검사
   const todayMemos = getMemosForDate(todayY, todayM, todayD, lunarObj);
   todayMemos.forEach(item => {
     const timing = item.alarmTiming || 'same_day';
-    if (timing === 'same_day' && item.alarmTime === currentTime && now.getSeconds() < 10) {
-      alert(`[알람] 오늘 일정: ${item.text}`);
+    if (item.alarmTime && timing === 'same_day' && item.alarmTime === currentTime) {
+      const key = `${item.id}_${todayY}${todayM}${todayD}_${currentTime}`;
+      if (!notifiedMap[key]) {
+        notifiedMap[key] = true;
+        triggerAlarm(`[알람] 오늘 일정: ${item.text}`);
+      }
     }
   });
 
+  // 내일 일정(하루 전) 알람 검사
   const tomorrowMemos = getMemosForDate(tomY, tomM, tomD, tomLunarObj);
   tomorrowMemos.forEach(item => {
     const timing = item.alarmTiming || 'same_day';
-    if (timing === '1_day_before' && item.alarmTime === currentTime && now.getSeconds() < 10) {
-      alert(`[하루 전 알람] 내일 일정: ${item.text}`);
+    if (item.alarmTime && timing === '1_day_before' && item.alarmTime === currentTime) {
+      const key = `${item.id}_${tomY}${tomM}${tomD}_${currentTime}`;
+      if (!notifiedMap[key]) {
+        notifiedMap[key] = true;
+        triggerAlarm(`[하루 전 알람] 내일 일정: ${item.text}`);
+      }
     }
   });
-}, 10000);
+}, 5000);
 </script>
 </body>
 </html>
