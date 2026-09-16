@@ -2,17 +2,21 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<!-- 손가락 확대/축소(user-scalable=yes) 가능하도록 viewport 수정 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 <title id="pageTitle">지우 할아버지의 달력</title>
 <style>
   * { box-sizing: border-box; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; }
   
   html, body {
     width: 100%;
-    height: 100%;
+    min-height: 100%;
     margin: 0;
     padding: 0;
     background-color: #f0f2f5;
+    /* 확대 시 스크롤이 원활하게 동작하도록 overflow 처리 */
+    overflow-x: auto;
+    overflow-y: auto;
   }
 
   body { 
@@ -696,7 +700,6 @@ function saveMemo() {
   closeModal();
   initCalendar();
   
-  // 알람 설정이 추가되었을 때 푸시 권한 요청
   requestNotificationPermission();
 }
 
@@ -709,7 +712,6 @@ function deleteMemo() {
   }
 }
 
-// 브라우저 푸시 알람 권한 요청
 function requestNotificationPermission() {
   if ("Notification" in window) {
     if (Notification.permission !== "granted" && Notification.permission !== "denied") {
@@ -724,7 +726,6 @@ function requestNotificationPermission() {
   }
 }
 
-// 실제 알람 실행 함수 (Notification API + alert)
 function triggerAlarm(msg) {
   if ("Notification" in window && Notification.permission === "granted") {
     new Notification("📅 달력 알람", { body: msg, icon: '' });
@@ -740,7 +741,6 @@ window.onload = function() {
   initCalendar();
 };
 
-// 알람 중복 실행 방지용 기록 객체
 const notifiedMap = {};
 
 setInterval(() => {
@@ -758,7 +758,6 @@ setInterval(() => {
   const tomD = tomorrow.getDate();
   const tomLunarObj = getLunarObj(tomY, tomM, tomD);
 
-  // 오늘 일정 알람 검사
   const todayMemos = getMemosForDate(todayY, todayM, todayD, lunarObj);
   todayMemos.forEach(item => {
     const timing = item.alarmTiming || 'same_day';
@@ -771,7 +770,6 @@ setInterval(() => {
     }
   });
 
-  // 내일 일정(하루 전) 알람 검사
   const tomorrowMemos = getMemosForDate(tomY, tomM, tomD, tomLunarObj);
   tomorrowMemos.forEach(item => {
     const timing = item.alarmTiming || 'same_day';
