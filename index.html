@@ -1,899 +1,219 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-<title id="pageTitle">지우 할아버지의 달력</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>지우 할아버지의 달력</title>
+  
+  <!-- Firebase SDK (v9/v10 호환 라이브러리) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-<!-- Firebase SDK (Version 9 / Compatibility Mode) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: 'Malgun Gothic', sans-serif; }
+    body { background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; }
+    .calendar-container { background: #ffffff; width: 100%; max-width: 500px; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    
+    .header-status { background: #edf2f7; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .status-text { font-size: 14px; font-weight: bold; color: #4a5568; }
+    .btn-login { background: #3182ce; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    .btn-logout { background: #e53e3e; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; display: none; }
 
-<style>
-  * { box-sizing: border-box; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; }
-  
-  html, body {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    background-color: #f0f2f5;
-    overflow-x: auto;
-    overflow-y: auto;
-  }
+    .title-area { text-align: center; margin-bottom: 15px; }
+    .title-area h2 { margin: 0; font-size: 24px; color: #2d3748; }
 
-  body { 
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 10px;
-    min-height: 100vh;
-  }
-  
-  .main-container {
-    width: 100%;
-    max-width: 1000px;
-    position: relative;
-    padding: 16px;
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-    background-color: #ffffff;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    overflow: hidden;
-  }
-  
-  .main-container::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(255, 255, 255, 0.82);
-    z-index: 1;
-  }
-  
-  .content-wrapper {
-    position: relative;
-    z-index: 2;
-    width: 100%;
-  }
-  
-  .auth-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: rgba(240, 242, 245, 0.95);
-    padding: 8px 12px;
-    border-radius: 8px;
-    margin-bottom: 12px;
-    font-size: 0.85rem;
-  }
+    .nav-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .nav-btn { background: #edf2f7; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .current-month { font-size: 18px; font-weight: bold; color: #2d3748; }
 
-  .user-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    color: #2c3e50;
-  }
-
-  .title-area {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  .main-title {
-    margin: 0;
-    font-size: clamp(1.2rem, 3vw, 1.8rem);
-    color: #1a252f;
-    font-weight: bold;
-    white-space: nowrap;
-  }
-  
-  .header { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-bottom: 12px; 
-  }
-
-  .header h3 { 
-    margin: 0; 
-    font-size: clamp(1.1rem, 2.5vw, 1.5rem); 
-    color: #2c3e50; 
-    font-weight: bold;
-  }
-
-  .btn { 
-    padding: 6px 12px; 
-    cursor: pointer; 
-    border: 1px solid #ccc; 
-    background: #fff; 
-    border-radius: 6px; 
-    font-size: clamp(0.75rem, 1.5vw, 0.95rem); 
-    font-weight: 500; 
-    white-space: nowrap; 
-    transition: all 0.2s;
-  }
-  .btn:hover { background: #f8f9fa; border-color: #007bff; }
-  .btn-google { background: #4285f4; color: #fff; border: none; font-weight: bold; }
-  .btn-google:hover { background: #357ae8; }
-  
-  .bg-control {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(0,0,0,0.08);
-  }
-  
-  .calendar { 
-    display: grid; 
-    grid-template-columns: repeat(7, 1fr); 
-    gap: 4px; 
-    width: 100%;
-  }
-
-  .day-header { 
-    text-align: center; 
-    font-weight: bold; 
-    padding: 6px 0; 
-    background: rgba(240, 242, 245, 0.9); 
-    border-radius: 4px; 
-    font-size: clamp(0.8rem, 1.5vw, 1rem); 
-  }
-  .day-header.sun { color: #d9534f; } 
-  .day-header.sat { color: #0275d8; }
-  
-  .cell { 
-    background: rgba(255, 255, 255, 0.9); 
-    border: 1px solid rgba(0, 0, 0, 0.1); 
-    min-height: clamp(65px, 10vh, 105px); 
-    padding: 4px; 
-    border-radius: 4px; 
-    cursor: pointer; 
-    display: flex; 
-    flex-direction: column; 
-    transition: all 0.2s;
-    overflow: hidden;
-  }
-  .cell:hover { border-color: #007bff; background: rgba(255, 255, 255, 0.98); }
-
-  .cell.today {
-    background: #e8f0fe !important;
-    border: 2px solid #1a73e8 !important;
-    box-shadow: inset 0 0 4px rgba(26, 115, 232, 0.3);
-  }
-  .cell.today .date-num {
-    color: #1a73e8 !important;
-    font-weight: 900;
-  }
-  
-  .date-header { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 2px; }
-  .date-num { font-weight: bold; font-size: clamp(0.85rem, 1.8vw, 1.1rem); line-height: 1; }
-  .lunar-num { font-size: clamp(0.6rem, 1.2vw, 0.75rem); color: #666; font-weight: normal; margin-top: 2px; }
-  
-  .cell.sun .date-num { color: #d9534f; } 
-  .cell.sat .date-num { color: #0275d8; }
-  
-  .cell.has-memo .date-num {
-    color: #00e676 !important;
-    text-shadow: 0 0 3px rgba(0, 230, 118, 0.8);
-    background-color: #111;
-    padding: 1px 3px;
-    border-radius: 3px;
-  }
-  
-  .memo-item { 
-    margin-top: 2px; 
-    padding: 2px 4px; 
-    border-radius: 3px; 
-    font-size: clamp(0.65rem, 1.2vw, 0.8rem); 
-    word-break: break-all; 
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    line-height: 1.2;
-  }
-  
-  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 100; }
-  .modal-content { background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 380px; }
-  .modal-content h3 { margin-top: 0; font-size: 1.2rem; }
-  .form-group { margin-bottom: 12px; }
-  .form-group label { display: block; font-size: 0.85rem; margin-bottom: 4px; }
-  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
-  .color-picker { display: flex; gap: 8px; }
-  .color-picker input { width: 50%; height: 36px; cursor: pointer; }
-  .modal-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-
-  @media (min-width: 768px) {
-    body { padding: 20px; }
-    .main-container { padding: 24px; }
-    .calendar { gap: 6px; }
-    .cell { padding: 6px; }
-  }
-</style>
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+    .day-header { font-weight: bold; padding: 8px 0; font-size: 14px; }
+    .day-header.sun { color: #e53e3e; }
+    .day-header.sat { color: #3182ce; }
+    
+    .date-cell { min-height: 65px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px; background: white; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-start; }
+    .date-cell:hover { background: #ebf8ff; }
+    .date-num { font-size: 14px; font-weight: bold; text-align: left; }
+    .sun .date-num { color: #e53e3e; }
+    .sat .date-num { color: #3182ce; }
+    
+    .event-item { background: #feebc8; color: #742a2a; font-size: 11px; padding: 2px 4px; border-radius: 4px; margin-top: 2px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  </style>
 </head>
 <body>
-  
-<div class="main-container" id="mainContainer">
-  <div class="content-wrapper">
-    <div class="auth-bar">
-      <div class="user-info" id="userInfo">
-        <span>🔒 동기화 미연결 (로그인 필요)</span>
-      </div>
-      <button class="btn btn-google" id="btnAuth" onclick="toggleAuth()">구글 계정 로그인</button>
-    </div>
 
-    <div class="title-area">
-      <h1 class="main-title" id="calendarTitle">지우 할아버지의 달력</h1>
-      <button class="btn" onclick="changeCalendarName()">✏️ 변경</button>
-    </div>
-  
-    <div class="bg-control">
-      <button class="btn" onclick="requestNotificationPermission()" style="color:#007bff; font-weight:bold;">🔔 알람 권한 허용</button>
-      <label for="bgUpload" class="btn">🖼️ 배경 사진</label>
-      <input type="file" id="bgUpload" accept="image/*" style="display:none;" onchange="uploadBackground(event)">
-      <button class="btn" onclick="removeBackground()">삭제</button>
-      <button class="btn" id="btnRestoreBg" onclick="restoreBackground()" style="display:none; color:#28a745; font-weight:bold;">↩️ 복원</button>
-    </div>
-  
-    <div class="header">
-      <button class="btn" onclick="moveMonth(-1)">◀ 이전달</button>
-      <h3 id="monthTitle"></h3>
-      <button class="btn" onclick="moveMonth(1)">다음달 ▶</button>
-    </div>
-  
-    <div class="calendar" id="calendar"></div>
+<div class="calendar-container">
+  <!-- 로그인 상태 표시 바 -->
+  <div class="header-status">
+    <span id="status-text" class="status-text">🔒 동기화 미연결 (로그인 필요)</span>
+    <button id="btn-login" class="btn-login" onclick="handleLogin()">구글 계정 로그인</button>
+    <button id="btn-logout" class="btn-logout" onclick="handleLogout()">로그아웃</button>
   </div>
-</div>
-  
-<div class="modal" id="memoModal">
-  <div class="modal-content">
-    <h3 id="modalDateTitle">일정 등록</h3>
-    <div class="form-group">
-      <label>내용</label>
-      <textarea id="memoText" rows="3" placeholder="메모할 내용을 입력하세요"></textarea>
-    </div>
-    <div class="form-group">
-      <label>반복 설정</label>
-      <select id="repeatType">
-        <option value="none">반복 없음</option>
-        <option value="monthly">매월 반복</option>
-        <option value="yearly_solar">매년 반복 (양력 기준)</option>
-        <option value="yearly_lunar">매년 반복 (음력 기준)</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>알람 설정</label>
-      <div style="display:flex; gap:6px;">
-        <select id="alarmTiming" style="width:45%;">
-          <option value="same_day">당일</option>
-          <option value="1_day_before">하루 전 (1일 전)</option>
-        </select>
-        <input type="time" id="alarmTime" style="width:55%;">
-      </div>
-    </div>
-    <div class="form-group">
-      <label>메모 색상 설정 (글자색 / 배경색)</label>
-      <div class="color-picker">
-        <input type="color" id="textColor" value="#000000">
-        <input type="color" id="bgColor" value="#e3f2fd">
-      </div>
-    </div>
-    <div class="modal-btns">
-      <button class="btn" onclick="deleteMemo()" id="btnDelete" style="display:none; color:red;">삭제</button>
-      <button class="btn" onclick="closeModal()">취소</button>
-      <button class="btn" onclick="saveMemo()" style="background:#007bff; color:#fff;">저장</button>
-    </div>
+
+  <!-- 타이틀 -->
+  <div class="title-area">
+    <h2>지우 할아버지의 달력</h2>
   </div>
+
+  <!-- 달 이동 네비게이션 -->
+  <div class="nav-area">
+    <button class="nav-btn" onclick="changeMonth(-1)">◀ 이전달</button>
+    <span id="month-title" class="current-month">2026년 9월</span>
+    <button class="nav-btn" onclick="changeMonth(1)">다음달 ▶</button>
+  </div>
+
+  <!-- 달력 출력 영역 -->
+  <div class="calendar-grid">
+    <div class="day-header sun">일</div>
+    <div class="day-header">월</div>
+    <div class="day-header">화</div>
+    <div class="day-header">수</div>
+    <div class="day-header">목</div>
+    <div class="day-header">금</div>
+    <div class="day-header sat">토</div>
+  </div>
+  <div id="calendar-days" class="calendar-grid"></div>
 </div>
-  
+
 <script>
-// --- FIREBASE CONFIGURATION ---
-const firebaseConfig = {
-  apiKey: "AIzaSyCDe243vfh3BfxvQ_ME9iaQpMs652UM0H8",
-  authDomain: "my-calendar-e89dc.firebaseapp.com",
-  databaseURL: "https://my-calendar-e89dc-default-rtdb.firebaseio.com",
-  projectId: "my-calendar-e89dc",
-  storageBucket: "my-calendar-e89dc.firebasestorage.app",
-  messagingSenderId: "1040980304308",
-  appId: "1:1040980304308:web:11b00f175b05756d9d92e1"
-};
+  // 1. 발급받으신 파이어베이스 설정 정보
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTOKW3Y3pEFikEMBQllyn46wP3_XInJhM",
+    authDomain: "my-calendar-2b531.firebaseapp.com",
+    projectId: "my-calendar-2b531",
+    storageBucket: "my-calendar-2b531.firebasestorage.app",
+    messagingSenderId: "391516744396",
+    appId: "1:391516744396:web:214d5afeae8474df76b069"
+  };
 
-firebase.initializeApp(firebaseConfig);
+  // 2. 파이어베이스 초기화
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-let currentUser = null;
-let realtimeDB = null;
+  let currentDate = new Date(2026, 8, 1); // 2026년 9월 기본 설정
+  let currentUser = null;
+  let events = {};
 
-function initFirebaseSync() {
-  realtimeDB = firebase.database();
-  
-  firebase.auth().onAuthStateChanged((user) => {
-    currentUser = user;
-    const userInfoEl = document.getElementById('userInfo');
-    const btnAuthEl = document.getElementById('btnAuth');
-    
-    if (user) {
-      userInfoEl.innerHTML = `<span>🟢 <b>${user.displayName || user.email}</b> 님 동기화 중</span>`;
-      btnAuthEl.innerText = '로그아웃';
-      btnAuthEl.style.background = '#6c757d';
-      
-      const userRef = realtimeDB.ref('users/' + user.uid + '/memos');
-      userRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          memos = Object.values(data);
-          localStorage.setItem('my_calendar_memos', JSON.stringify(memos));
-        } else {
-          memos = [];
-        }
-        initCalendar();
-      });
-    } else {
-      userInfoEl.innerHTML = `<span>🔒 동기화 미연결 (로그인 필요)</span>`;
-      btnAuthEl.innerText = '구글 계정 로그인';
-      btnAuthEl.style.background = '#4285f4';
-    }
-  });
-}
-
-function toggleAuth() {
-  if (currentUser) {
-    firebase.auth().signOut().then(() => {
-      alert("로그아웃되었습니다.");
-      location.reload();
-    });
-  } else {
+  // 3. 구글 로그인 처리
+  function handleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    firebase.auth().signInWithPopup(provider).catch((error) => {
+    auth.signInWithPopup(provider).catch(error => {
       alert("로그인 실패: " + error.message);
     });
   }
-}
 
-function syncMemosToCloud() {
-  if (currentUser && realtimeDB) {
-    realtimeDB.ref('users/' + currentUser.uid + '/memos').set(memos);
+  // 4. 로그아웃 처리
+  function handleLogout() {
+    auth.signOut();
   }
-}
 
-// --- INDEXED DB FOR BACKGROUND IMAGE ---
-let db;
-const dbReq = indexedDB.open("CalendarImageDB", 1);
+  // 5. 인증 상태 감지
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    const statusText = document.getElementById("status-text");
+    const btnLogin = document.getElementById("btn-login");
+    const btnLogout = document.getElementById("btn-logout");
 
-dbReq.onupgradeneeded = function(e) {
-  db = e.target.result;
-  if (!db.objectStoreNames.contains("images")) {
-    db.createObjectStore("images");
-  }
-};
-
-dbReq.onsuccess = function(e) {
-  db = e.target.result;
-  loadStoredImages();
-};
-
-function saveImageToDB(key, fileOrData) {
-  if (!db) return;
-  const tx = db.transaction("images", "readwrite");
-  const store = tx.objectStore("images");
-  store.put(fileOrData, key);
-}
-
-function getImageFromDB(key, callback) {
-  if (!db) return;
-  const tx = db.transaction("images", "readonly");
-  const store = tx.objectStore("images");
-  const req = store.get(key);
-  req.onsuccess = function() {
-    callback(req.result);
-  };
-}
-
-function deleteImageFromDB(key) {
-  if (!db) return;
-  const tx = db.transaction("images", "readwrite");
-  const store = tx.objectStore("images");
-  store.delete(key);
-}
-
-function loadStoredImages() {
-  getImageFromDB("current_bg", function(data) {
-    if (data) applyBgToContainer(data);
+    if (user) {
+      statusText.innerText = "☁️ 동기화 완료 (" + user.displayName + "님)";
+      btnLogin.style.display = "none";
+      btnLogout.style.display = "inline-block";
+      loadEvents();
+    } else {
+      statusText.innerText = "🔒 동기화 미연결 (로그인 필요)";
+      btnLogin.style.display = "inline-block";
+      btnLogout.style.display = "none";
+      events = {};
+      renderCalendar();
+    }
   });
 
-  getImageFromDB("backup_bg", function(data) {
-    if (data) document.getElementById('btnRestoreBg').style.display = 'inline-block';
-  });
-}
-
-function applyBgToContainer(data) {
-  const container = document.getElementById('mainContainer');
-  if (typeof data === 'string') {
-    container.style.backgroundImage = `url(${data})`;
-  } else if (data instanceof Blob || data instanceof File) {
-    const url = URL.createObjectURL(data);
-    container.style.backgroundImage = `url(${url})`;
+  // 6. 달력 연도/월 이동
+  function changeMonth(diff) {
+    currentDate.setMonth(currentDate.getMonth() + diff);
+    renderCalendar();
+    if (currentUser) loadEvents();
   }
-}
 
-function getLunarObj(year, month, day) {
-  try {
-    if (year === 2026 && month === 10) {
-      if (day <= 10) {
-        const lDay = 20 + day;
-        return { month: 8, day: lDay, str: `8.${lDay}` };
+  // 7. 달력 화면 그리기
+  function renderCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    document.getElementById("month-title").innerText = `${year}년 ${month + 1}월`;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    const calendarDays = document.getElementById("calendar-days");
+    calendarDays.innerHTML = "";
+
+    // 빈 날짜 칸
+    for (let i = 0; i < firstDay; i++) {
+      const emptyCell = document.createElement("div");
+      emptyCell.className = "date-cell";
+      calendarDays.appendChild(emptyCell);
+    }
+
+    // 일자 생성
+    for (let date = 1; date <= lastDate; date++) {
+      const cell = document.createElement("div");
+      const dayOfWeek = (firstDay + date - 1) % 7;
+      
+      let dayClass = "date-cell";
+      if (dayOfWeek === 0) dayClass += " sun";
+      if (dayOfWeek === 6) dayClass += " sat";
+      cell.className = dayClass;
+
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+
+      let eventHtml = "";
+      if (events[dateStr]) {
+        eventHtml = `<div class="event-item">${events[dateStr]}</div>`;
+      }
+
+      cell.innerHTML = `<div class="date-num">${date}</div>${eventHtml}`;
+      cell.onclick = () => addEvent(dateStr);
+
+      calendarDays.appendChild(cell);
+    }
+  }
+
+  // 8. 일정 추가 및 파이어베이스 저장
+  function addEvent(dateStr) {
+    if (!currentUser) {
+      alert("일정을 저장하려면 먼저 구글 로그인을 진행해주세요.");
+      return;
+    }
+    const title = prompt(`${dateStr} 일정을 입력하세요:`, events[dateStr] || "");
+    if (title !== null) {
+      if (title.trim() === "") {
+        delete events[dateStr];
+        db.collection("users").doc(currentUser.uid).collection("events").doc(dateStr).delete();
       } else {
-        const lDay = day - 10;
-        return { month: 9, day: lDay, str: `9.${lDay}` };
+        events[dateStr] = title;
+        db.collection("users").doc(currentUser.uid).collection("events").doc(dateStr).set({ title: title });
       }
-    }
-
-    const date = new Date(year, month - 1, day);
-    const formatter = new Intl.DateTimeFormat('ko-KR-u-ca-chinese', { month: 'numeric', day: 'numeric' });
-    const parts = formatter.formatToParts(date);
-    let lMonth = 0, lDay = 0;
-    for (const part of parts) {
-      if (part.type === 'month') lMonth = parseInt(part.value.replace(/[^0-9]/g, ''), 10);
-      if (part.type === 'day') lDay = parseInt(part.value.replace(/[^0-9]/g, ''), 10);
-    }
-
-    return { month: lMonth, day: lDay, str: `${lMonth}.${lDay}` };
-  } catch (e) {
-    return { month: 0, day: 0, str: '' };
-  }
-}
-
-function getSolarTermDay(year, termIndex) {
-  const C = [
-    5.4055, 20.12, 4.6295, 19.4599, 5.8592, 20.646, 4.81, 20.1,
-    5.52, 21.04, 5.678, 21.37, 7.108, 22.83, 7.446, 23.13,
-    7.5, 23.042, 8.318, 23.438, 7.436, 22.36, 7.18, 21.94
-  ];
-  const y = year % 100;
-  return Math.floor(y * 0.2422 + C[termIndex]) - Math.floor((y - 1) / 4);
-}
-
-function getSambokDates(year) {
-  const hajiDay = getSolarTermDay(year, 11);
-  const ipchuDay = getSolarTermDay(year, 14);
-
-  const hajiDate = Date.UTC(year, 5, hajiDay);
-  const ipchuDate = Date.UTC(year, 7, ipchuDay);
-
-  const baseGengUTC = Date.UTC(2024, 0, 7);
-
-  const getNextGengDayUTC = (fromUTC, count) => {
-    let cur = fromUTC;
-    let gengCount = 0;
-    while (true) {
-      const diffDays = Math.round((cur - baseGengUTC) / 86400000);
-      if (diffDays % 10 === 0) {
-        gengCount++;
-        if (gengCount === count) {
-          const d = new Date(cur);
-          return { m: d.getUTCMonth() + 1, d: d.getUTCDate() };
-        }
-      }
-      cur += 86400000;
-    }
-  };
-
-  const chobok = getNextGengDayUTC(hajiDate, 3);
-  const jungbok = getNextGengDayUTC(hajiDate, 4);
-  const malbok = getNextGengDayUTC(ipchuDate, 1);
-
-  return { chobok, jungbok, malbok };
-}
-
-function getSolarTermAndSambok(year, month, day) {
-  const termNames = [
-    "소한", "대한", "입춘", "우수", "경칩", "춘분", "청명", "곡우",
-    "입하", "소만", "망종", "하지", "소서", "대서", "입추", "처서",
-    "백로", "추분", "한로", "상강", "입동", "소설", "대설", "동지"
-  ];
-  const styleGreen = { textColor: '#1b5e20', bgColor: '#e8f5e9' };
-  const styleOrange = { textColor: '#e65100', bgColor: '#fff3e0' };
-  const results = [];
-
-  const mIdx = (month - 1) * 2;
-  const day1 = getSolarTermDay(year, mIdx);
-  const day2 = getSolarTermDay(year, mIdx + 1);
-
-  if (day === day1) results.push({ text: `🌿 ${termNames[mIdx]}`, ...styleGreen });
-  if (day === day2) results.push({ text: `🌿 ${termNames[mIdx + 1]}`, ...styleGreen });
-
-  const { chobok, jungbok, malbok } = getSambokDates(year);
-
-  if (chobok.m === month && chobok.d === day) {
-    results.push({ text: '🐔 초복', ...styleOrange });
-  }
-  if (jungbok.m === month && jungbok.d === day) {
-    results.push({ text: '🐔 중복', ...styleOrange });
-  }
-  if (malbok.m === month && malbok.d === day) {
-    results.push({ text: '🐔 말복', ...styleOrange });
-  }
-
-  return results;
-}
-
-const todayDate = new Date();
-let currentYear = todayDate.getFullYear();
-let currentMonth = todayDate.getMonth(); 
-let selectedDateKey = '';
-let selectedMemoId = null;
-
-function changeCalendarName() {
-  const currentName = document.getElementById('calendarTitle').innerText;
-  const newName = prompt('사용하실 달력 이름을 입력하세요:', currentName);
-  if (newName !== null && newName.trim() !== '') {
-    const trimmedName = newName.trim();
-    document.getElementById('calendarTitle').innerText = trimmedName;
-    document.getElementById('pageTitle').innerText = trimmedName;
-    localStorage.setItem('my_calendar_title', trimmedName);
-  }
-}
-
-function getAutoHolidays(year, month, day, lunarObj) {
-  const holidays = [];
-  const styleRed = { textColor: '#d32f2f', bgColor: '#ffebee' };
-
-  if (month === 1 && day === 1) holidays.push({ text: '🔴 신정', ...styleRed });
-  if (month === 3 && day === 1) holidays.push({ text: '🔴 삼일절', ...styleRed });
-  if (month === 5 && day === 5) holidays.push({ text: '🔴 어린이날', ...styleRed });
-  if (month === 6 && day === 6) holidays.push({ text: '🔴 현충일', ...styleRed });
-  if (month === 8 && day === 15) holidays.push({ text: '🔴 광복절', ...styleRed });
-  if (month === 10 && day === 3) holidays.push({ text: '🔴 개천절', ...styleRed });
-  if (month === 10 && day === 9) holidays.push({ text: '🔴 한글날', ...styleRed });
-  if (month === 12 && day === 25) holidays.push({ text: '🔴 성탄절', ...styleRed });
-
-  if (lunarObj.month === 1) {
-    if (lunarObj.day === 1) holidays.push({ text: '🔴 설날', ...styleRed });
-    else if (lunarObj.day === 2) holidays.push({ text: '🔴 설 연휴', ...styleRed });
-  } else {
-    const nextDate = new Date(year, month - 1, day + 1);
-    const nextLunar = getLunarObj(nextDate.getFullYear(), nextDate.getMonth() + 1, nextDate.getDate());
-    if (nextLunar.month === 1 && nextLunar.day === 1) {
-      holidays.push({ text: '🔴 설 연휴', ...styleRed });
+      renderCalendar();
     }
   }
 
-  if (lunarObj.month === 4 && lunarObj.day === 8) {
-    holidays.push({ text: '🔴 부처님오신날', ...styleRed });
-  }
-
-  if (lunarObj.month === 8) {
-    if (lunarObj.day === 14 || lunarObj.day === 16) {
-      holidays.push({ text: '🔴 추석 연휴', ...styleRed });
-    } else if (lunarObj.day === 15) {
-      holidays.push({ text: '🔴 추석', ...styleRed });
-    }
-  }
-
-  return holidays;
-}
-
-let localSaved = localStorage.getItem('my_calendar_memos');
-let memos = localSaved ? JSON.parse(localSaved) : [];
-
-const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
-
-function uploadBackground(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  getImageFromDB("current_bg", function(oldData) {
-    if (oldData) {
-      saveImageToDB("backup_bg", oldData);
-      document.getElementById('btnRestoreBg').style.display = 'inline-block';
-    }
-    saveImageToDB("current_bg", file);
-    applyBgToContainer(file);
-    alert('사진이 적용되었습니다!');
-    e.target.value = '';
-  });
-}
-
-function removeBackground() {
-  getImageFromDB("current_bg", function(data) {
-    if (data) {
-      saveImageToDB("backup_bg", data);
-      deleteImageFromDB("current_bg");
-      document.getElementById('mainContainer').style.backgroundImage = '';
-      document.getElementById('btnRestoreBg').style.display = 'inline-block';
-      alert('배경 사진이 삭제되었습니다.');
-    }
-  });
-}
-
-function restoreBackground() {
-  getImageFromDB("backup_bg", function(backupData) {
-    if (backupData) {
-      saveImageToDB("current_bg", backupData);
-      deleteImageFromDB("backup_bg");
-      applyBgToContainer(backupData);
-      document.getElementById('btnRestoreBg').style.display = 'none';
-      alert('이전 배경 사진으로 복원되었습니다!');
-    }
-  });
-}
-
-function initCalendar() {
-  const container = document.getElementById('calendar');
-  if (!container) return;
-  container.innerHTML = '';
-  
-  document.getElementById('monthTitle').innerText = `${currentYear}년 ${currentMonth + 1}월`;
-  
-  daysOfWeek.forEach((day, idx) => {
-    const div = document.createElement('div');
-    div.className = `day-header ${idx===0?'sun':idx===6?'sat':''}`;
-    div.innerText = day;
-    container.appendChild(div);
-  });
-  
-  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-  const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
-  
-  const now = new Date();
-  const realTodayY = now.getFullYear();
-  const realTodayM = now.getMonth();
-  const realTodayD = now.getDate();
-
-  for (let i = 0; i < firstDay; i++) {
-    const emptyCell = document.createElement('div');
-    emptyCell.className = 'cell';
-    emptyCell.style.background = 'rgba(240,240,240,0.4)';
-    container.appendChild(emptyCell);
-  }
-  
-  for (let date = 1; date <= lastDate; date++) {
-    const cell = document.createElement('div');
-    const dayOfWeek = (firstDay + date - 1) % 7;
-    const lunarObj = getLunarObj(currentYear, currentMonth + 1, date);
-    
-    const userMemos = getMemosForDate(currentYear, currentMonth + 1, date, lunarObj).filter(m => {
-      const t = m.text.replace(/^[^\w\s가-힣]+/, '').trim();
-      return !["초복", "중복", "말복", "백로", "소서", "대서", "추분", "소시", "입추", "추석", "추석 연휴"].includes(t);
-    });
-
-    const autoHolidays = getAutoHolidays(currentYear, currentMonth + 1, date, lunarObj);
-    const solarTerms = getSolarTermAndSambok(currentYear, currentMonth + 1, date);
-    
-    const rawAll = [...autoHolidays, ...solarTerms, ...userMemos];
-    const allMemos = [];
-    const seenTexts = new Set();
-
-    for (const m of rawAll) {
-      const cleanText = m.text.replace(/^[^\w\s가-힣]+/, '').trim();
-      if (!seenTexts.has(cleanText)) {
-        seenTexts.add(cleanText);
-        allMemos.push(m);
-      }
-    }
-
-    const hasMemoClass = userMemos.length > 0 ? 'has-memo' : '';
-    const isHoliday = autoHolidays.length > 0;
-    const isToday = (currentYear === realTodayY && currentMonth === realTodayM && date === realTodayD);
-    const todayClass = isToday ? 'today' : '';
-
-    cell.className = `cell ${dayOfWeek===0 || isHoliday ?'sun':dayOfWeek===6?'sat':''} ${hasMemoClass} ${todayClass}`;
-    
-    const dateKey = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(date).padStart(2,'0')}`;
-    
-    cell.innerHTML = `
-      <div class="date-header">
-        <span class="date-num">${date}</span>
-        <span class="lunar-num">(${lunarObj.str})</span>
-      </div>
-    `;
-    
-    cell.onclick = (e) => {
-      if(e.target === cell || e.target.classList.contains('date-num') || e.target.classList.contains('date-header') || e.target.classList.contains('lunar-num')) {
-        openModal(dateKey);
-      }
-    };
-
-    allMemos.forEach(m => {
-      const item = document.createElement('div');
-      item.className = 'memo-item';
-      item.style.color = m.textColor;
-      item.style.backgroundColor = m.bgColor;
-      item.innerText = m.text;
-      if (m.id) {
-        item.onclick = (e) => {
-          e.stopPropagation();
-          openModal(dateKey, m.id);
-        };
-      }
-      cell.appendChild(item);
-    });
-
-    container.appendChild(cell);
-  }
-}
-
-function getMemosForDate(y, m, d, lunarObj) {
-  return memos.filter(item => {
-    const [iy, im, id] = item.date.split('-').map(Number);
-    if (item.repeat === 'yearly') item.repeat = 'yearly_solar';
-
-    if (item.repeat === 'none') return iy === y && im === m && id === d;
-    if (item.repeat === 'monthly') return id === d;
-    if (item.repeat === 'yearly_solar') return im === m && id === d;
-    if (item.repeat === 'yearly_lunar') {
-      const itemLunar = item.lunarDate || getLunarObj(iy, im, id);
-      return itemLunar.month === lunarObj.month && itemLunar.day === lunarObj.day;
-    }
-    return false;
-  });
-}
-
-function moveMonth(delta) {
-  currentMonth += delta;
-  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-  initCalendar();
-}
-
-function openModal(dateKey, memoId = null) {
-  selectedDateKey = dateKey;
-  selectedMemoId = memoId;
-  document.getElementById('modalDateTitle').innerText = `${dateKey} 일정`;
-  
-  if (memoId) {
-    const target = memos.find(m => m.id === memoId);
-    document.getElementById('memoText').value = target.text;
-    document.getElementById('repeatType').value = target.repeat === 'yearly' ? 'yearly_solar' : target.repeat;
-    document.getElementById('alarmTiming').value = target.alarmTiming || 'same_day';
-    document.getElementById('alarmTime').value = target.alarmTime || '';
-    document.getElementById('textColor').value = target.textColor;
-    document.getElementById('bgColor').value = target.bgColor;
-    document.getElementById('btnDelete').style.display = 'block';
-  } else {
-    document.getElementById('memoText').value = '';
-    document.getElementById('repeatType').value = 'none';
-    document.getElementById('alarmTiming').value = 'same_day';
-    document.getElementById('alarmTime').value = '';
-    document.getElementById('textColor').value = '#000000';
-    document.getElementById('bgColor').value = '#e3f2fd';
-    document.getElementById('btnDelete').style.display = 'none';
-  }
-  document.getElementById('memoModal').style.display = 'flex';
-}
-
-function closeModal() {
-  document.getElementById('memoModal').style.display = 'none';
-}
-
-function saveMemo() {
-  const text = document.getElementById('memoText').value.trim();
-  if (!text) return alert('내용을 입력해주세요.');
-  
-  const [y, m, d] = selectedDateKey.split('-').map(Number);
-  const lunarObj = getLunarObj(y, m, d);
-  
-  if (selectedMemoId) {
-    const index = memos.findIndex(m => m.id === selectedMemoId);
-    memos[index] = {
-      ...memos[index],
-      text,
-      repeat: document.getElementById('repeatType').value,
-      alarmTiming: document.getElementById('alarmTiming').value,
-      alarmTime: document.getElementById('alarmTime').value,
-      textColor: document.getElementById('textColor').value,
-      bgColor: document.getElementById('bgColor').value,
-      lunarDate: lunarObj
-    };
-  } else {
-    memos.push({
-      id: Date.now(),
-      date: selectedDateKey,
-      text,
-      repeat: document.getElementById('repeatType').value,
-      alarmTiming: document.getElementById('alarmTiming').value,
-      alarmTime: document.getElementById('alarmTime').value,
-      textColor: document.getElementById('textColor').value,
-      bgColor: document.getElementById('bgColor').value,
-      lunarDate: lunarObj
-    });
-  }
-  
-  localStorage.setItem('my_calendar_memos', JSON.stringify(memos));
-  syncMemosToCloud();
-  closeModal();
-  initCalendar();
-  
-  requestNotificationPermission();
-}
-
-function deleteMemo() {
-  if (confirm('이 메모를 삭제하시겠습니까?')) {
-    memos = memos.filter(m => m.id !== selectedMemoId);
-    localStorage.setItem('my_calendar_memos', JSON.stringify(memos));
-    syncMemosToCloud();
-    closeModal();
-    initCalendar();
-  }
-}
-
-function requestNotificationPermission() {
-  if ("Notification" in window) {
-    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-      Notification.requestPermission().then(permission => {
-        if (permission === "granted") {
-          alert("알람 권한이 허용되었습니다.");
-        }
+  // 9. 파이어베이스 데이터 불러오기
+  function loadEvents() {
+    if (!currentUser) return;
+    db.collection("users").doc(currentUser.uid).collection("events").get().then(snapshot => {
+      events = {};
+      snapshot.forEach(doc => {
+        events[doc.id] = doc.data().title;
       });
-    } else if (Notification.permission === "granted") {
-      alert("이미 알람 권한이 허용되어 있습니다.");
-    }
+      renderCalendar();
+    });
   }
-}
 
-function triggerAlarm(msg) {
-  if ("Notification" in window && Notification.permission === "granted") {
-    new Notification("📅 달력 알람", { body: msg, icon: '' });
-  }
-  alert(msg);
-}
-
-window.onload = function() {
-  const savedTitle = localStorage.getItem('my_calendar_title') || '지우 할아버지의 달력';
-  document.getElementById('calendarTitle').innerText = savedTitle;
-  document.getElementById('pageTitle').innerText = savedTitle;
-
-  initCalendar();
-  initFirebaseSync();
-};
-
-const notifiedMap = {};
-
-setInterval(() => {
-  const now = new Date();
-  const todayY = now.getFullYear();
-  const todayM = now.getMonth() + 1;
-  const todayD = now.getDate();
-  const lunarObj = getLunarObj(todayY, todayM, todayD);
-  const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  
-  const tomorrow = new Date(now);
-  tomorrow.setDate(now.getDate() + 1);
-  const tomY = tomorrow.getFullYear();
-  const tomM = tomorrow.getMonth() + 1;
-  const tomD = tomorrow.getDate();
-  const tomLunarObj = getLunarObj(tomY, tomM, tomD);
-
-  const todayMemos = getMemosForDate(todayY, todayM, todayD, lunarObj);
-  todayMemos.forEach(item => {
-    const timing = item.alarmTiming || 'same_day';
-    if (item.alarmTime && timing === 'same_day' && item.alarmTime === currentTime) {
-      const key = `${item.id}_${todayY}${todayM}${todayD}_${currentTime}`;
-      if (!notifiedMap[key]) {
-        notifiedMap[key] = true;
-        triggerAlarm(`[알람] 오늘 일정: ${item.text}`);
-      }
-    }
-  });
-
-  const tomorrowMemos = getMemosForDate(tomY, tomM, tomD, tomLunarObj);
-  tomorrowMemos.forEach(item => {
-    const timing = item.alarmTiming || 'same_day';
-    if (item.alarmTime && timing === '1_day_before' && item.alarmTime === currentTime) {
-      const key = `${item.id}_${tomY}${tomM}${tomD}_${currentTime}`;
-      if (!notifiedMap[key]) {
-        notifiedMap[key] = true;
-        triggerAlarm(`[하루 전 알람] 내일 일정: ${item.text}`);
-      }
-    }
-  });
-}, 5000);
+  // 최초 달력 표시
+  renderCalendar();
 </script>
+
 </body>
 </html>
