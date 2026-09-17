@@ -2,9 +2,14 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<!-- 모바일 손가락 확대/축소 가능 및 반응형 기본 설정 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 <title id="pageTitle">지우 할아버지의 달력</title>
+
+<!-- Firebase SDK (Version 9 / Compatibility Mode) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <style>
   * { box-sizing: border-box; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; }
   
@@ -54,6 +59,25 @@
     width: 100%;
   }
   
+  .auth-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(240, 242, 245, 0.95);
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+  }
+
   .title-area {
     display: flex;
     justify-content: center;
@@ -96,6 +120,8 @@
     transition: all 0.2s;
   }
   .btn:hover { background: #f8f9fa; border-color: #007bff; }
+  .btn-google { background: #4285f4; color: #fff; border: none; font-weight: bold; }
+  .btn-google:hover { background: #357ae8; }
   
   .bg-control {
     display: flex;
@@ -196,6 +222,14 @@
   
 <div class="main-container" id="mainContainer">
   <div class="content-wrapper">
+    <!-- 구글 로그인 / 연동 상태 표시 바 -->
+    <div class="auth-bar">
+      <div class="user-info" id="userInfo">
+        <span>🔒 동기화 미연결 (로그인 필요)</span>
+      </div>
+      <button class="btn btn-google" id="btnAuth" onclick="toggleAuth()">구글 계정 로그인</button>
+    </div>
+
     <div class="title-area">
       <h1 class="main-title" id="calendarTitle">지우 할아버지의 달력</h1>
       <button class="btn" onclick="changeCalendarName()">✏️ 변경</button>
@@ -259,48 +293,89 @@
     </div>
   </div>
 </div>
-
-<!-- Firebase SDK 모듈 로드 -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-// 발급받으신 Firebase 설정 적용
+  
+<script>
+// --- FIREBASE CONFIGURATION ---
+// 주의: 아래 firebaseConfig 객체 값은 본인의 Firebase 콘솔 설정값으로 변경해주시면 완벽히 동작합니다.
 const firebaseConfig = {
-  apiKey: "AIzaSyCDe243vfh3BfxvQ_ME9iaQpMs652UM0H8",
-  authDomain: "my-calendar-e89dc.firebaseapp.com",
-  projectId: "my-calendar-e89dc",
-  storageBucket: "my-calendar-e89dc.firebasestorage.app",
-  messagingSenderId: "1040980304308",
-  appId: "1:1040980304308:web:11b00f175b05756d9d92e1"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
-const app = initializeApp(firebaseConfig);
-const dbStore = getFirestore(app);
-
-// 고유 사용자 ID 세팅
-let userId = localStorage.getItem('user_device_id');
-if (!userId) {
-  userId = 'user_' + Math.random().toString(36).substr(2, 9);
-  localStorage.setItem('user_device_id', userId);
+// Initialize Firebase
+if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+  firebase.initializeApp(firebaseConfig);
 }
 
-// 실시간 데이터베이스 수신 및 반영
-const memosRef = collection(dbStore, "users", userId, "memos");
-onSnapshot(memosRef, (snapshot) => {
-  window.memos = [];
-  snapshot.forEach((docSnap) => {
-    window.memos.push(docSnap.data());
+let currentUser = null;
+let realtimeDB = null;
+
+function initFirebaseSync() {
+  if (firebaseConfig.apiKey === "YOUR_API_KEY") return;
+  
+  realtimeDB = firebase.database();
+  
+  firebase.auth().onAuthStateChanged((user) => {
+    currentUser = user;
+    const userInfoEl = document.getElementById('userInfo');
+    const btnAuthEl = document.getElementById('btnAuth');
+    
+    if (user) {
+      userInfoEl.innerHTML = `<span>🟢 <b>${user.displayName || user.email}</b> 님 동기화 중</span>`;
+      btnAuthEl.innerText = '로그아웃';
+      btnAuthEl.style.background = '#6c757d';
+      
+      // 구글 실시간 서버 데이터 구독
+      const userRef = realtimeDB.ref('users/' + user.uid + '/memos');
+      userRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          memos = Object.values(data);
+          localStorage.setItem('my_calendar_memos', JSON.stringify(memos));
+        } else {
+          memos = [];
+        }
+        initCalendar();
+      });
+    } else {
+      userInfoEl.innerHTML = `<span>🔒 동기화 미연결 (로그인 필요)</span>`;
+      btnAuthEl.innerText = '구글 계정 로그인';
+      btnAuthEl.style.background = '#4285f4';
+    }
   });
-  localStorage.setItem('my_calendar_memos', JSON.stringify(window.memos));
-  window.initCalendar();
-});
+}
 
-window.dbStore = dbStore;
-window.userId = userId;
-</script>
+function toggleAuth() {
+  if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+    alert("Firebase 설정을 등록한 후 구글 로그인을 이용하실 수 있습니다.");
+    return;
+  }
+  
+  if (currentUser) {
+    firebase.auth().signOut().then(() => {
+      alert("로그아웃되었습니다.");
+      location.reload();
+    });
+  } else {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider).catch((error) => {
+      alert("로그인 실패: " + error.message);
+    });
+  }
+}
 
-<script>
+function syncMemosToCloud() {
+  if (currentUser && realtimeDB) {
+    realtimeDB.ref('users/' + currentUser.uid + '/memos').set(memos);
+  }
+}
+
+// --- INDEXED DB FOR BACKGROUND IMAGE ---
 let db;
 const dbReq = indexedDB.open("CalendarImageDB", 1);
 
@@ -518,7 +593,7 @@ function getAutoHolidays(year, month, day, lunarObj) {
 }
 
 let localSaved = localStorage.getItem('my_calendar_memos');
-window.memos = localSaved ? JSON.parse(localSaved) : [];
+let memos = localSaved ? JSON.parse(localSaved) : [];
 
 const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -562,7 +637,7 @@ function restoreBackground() {
   });
 }
 
-window.initCalendar = function() {
+function initCalendar() {
   const container = document.getElementById('calendar');
   if (!container) return;
   container.innerHTML = '';
@@ -655,10 +730,10 @@ window.initCalendar = function() {
 
     container.appendChild(cell);
   }
-};
+}
 
 function getMemosForDate(y, m, d, lunarObj) {
-  return window.memos.filter(item => {
+  return memos.filter(item => {
     const [iy, im, id] = item.date.split('-').map(Number);
     if (item.repeat === 'yearly') item.repeat = 'yearly_solar';
 
@@ -677,7 +752,7 @@ function moveMonth(delta) {
   currentMonth += delta;
   if (currentMonth < 0) { currentMonth = 11; currentYear--; }
   if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-  window.initCalendar();
+  initCalendar();
 }
 
 function openModal(dateKey, memoId = null) {
@@ -686,7 +761,7 @@ function openModal(dateKey, memoId = null) {
   document.getElementById('modalDateTitle').innerText = `${dateKey} 일정`;
   
   if (memoId) {
-    const target = window.memos.find(m => m.id === memoId);
+    const target = memos.find(m => m.id === memoId);
     document.getElementById('memoText').value = target.text;
     document.getElementById('repeatType').value = target.repeat === 'yearly' ? 'yearly_solar' : target.repeat;
     document.getElementById('alarmTiming').value = target.alarmTiming || 'same_day';
@@ -710,43 +785,54 @@ function closeModal() {
   document.getElementById('memoModal').style.display = 'none';
 }
 
-async function saveMemo() {
+function saveMemo() {
   const text = document.getElementById('memoText').value.trim();
   if (!text) return alert('내용을 입력해주세요.');
   
   const [y, m, d] = selectedDateKey.split('-').map(Number);
   const lunarObj = getLunarObj(y, m, d);
   
-  const memoId = selectedMemoId ? selectedMemoId : Date.now();
-  const memoData = {
-    id: memoId,
-    date: selectedDateKey,
-    text,
-    repeat: document.getElementById('repeatType').value,
-    alarmTiming: document.getElementById('alarmTiming').value,
-    alarmTime: document.getElementById('alarmTime').value,
-    textColor: document.getElementById('textColor').value,
-    bgColor: document.getElementById('bgColor').value,
-    lunarDate: lunarObj
-  };
-
-  // Firebase Firestore에 저장/업데이트
-  if (window.dbStore && window.userId) {
-    const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
-    await setDoc(doc(window.dbStore, "users", window.userId, "memos", String(memoId)), memoData);
+  if (selectedMemoId) {
+    const index = memos.findIndex(m => m.id === selectedMemoId);
+    memos[index] = {
+      ...memos[index],
+      text,
+      repeat: document.getElementById('repeatType').value,
+      alarmTiming: document.getElementById('alarmTiming').value,
+      alarmTime: document.getElementById('alarmTime').value,
+      textColor: document.getElementById('textColor').value,
+      bgColor: document.getElementById('bgColor').value,
+      lunarDate: lunarObj
+    };
+  } else {
+    memos.push({
+      id: Date.now(),
+      date: selectedDateKey,
+      text,
+      repeat: document.getElementById('repeatType').value,
+      alarmTiming: document.getElementById('alarmTiming').value,
+      alarmTime: document.getElementById('alarmTime').value,
+      textColor: document.getElementById('textColor').value,
+      bgColor: document.getElementById('bgColor').value,
+      lunarDate: lunarObj
+    });
   }
   
+  localStorage.setItem('my_calendar_memos', JSON.stringify(memos));
+  syncMemosToCloud(); // 구글 서버 동기화 함수 호출
   closeModal();
+  initCalendar();
+  
   requestNotificationPermission();
 }
 
-async function deleteMemo() {
+function deleteMemo() {
   if (confirm('이 메모를 삭제하시겠습니까?')) {
-    if (window.dbStore && window.userId && selectedMemoId) {
-      const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
-      await deleteDoc(doc(window.dbStore, "users", window.userId, "memos", String(selectedMemoId)));
-    }
+    memos = memos.filter(m => m.id !== selectedMemoId);
+    localStorage.setItem('my_calendar_memos', JSON.stringify(memos));
+    syncMemosToCloud(); // 구글 서버 동기화 함수 호출
     closeModal();
+    initCalendar();
   }
 }
 
@@ -776,7 +862,8 @@ window.onload = function() {
   document.getElementById('calendarTitle').innerText = savedTitle;
   document.getElementById('pageTitle').innerText = savedTitle;
 
-  window.initCalendar();
+  initCalendar();
+  initFirebaseSync();
 };
 
 const notifiedMap = {};
