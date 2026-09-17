@@ -222,7 +222,6 @@
   
 <div class="main-container" id="mainContainer">
   <div class="content-wrapper">
-    <!-- 구글 로그인 / 연동 상태 표시 바 -->
     <div class="auth-bar">
       <div class="user-info" id="userInfo">
         <span>🔒 동기화 미연결 (로그인 필요)</span>
@@ -296,28 +295,22 @@
   
 <script>
 // --- FIREBASE CONFIGURATION ---
-// 주의: 아래 firebaseConfig 객체 값은 본인의 Firebase 콘솔 설정값으로 변경해주시면 완벽히 동작합니다.
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCDe243vfh3BfxvQ_ME9iaQpMs652UM0H8",
+  authDomain: "my-calendar-e89dc.firebaseapp.com",
+  databaseURL: "https://my-calendar-e89dc-default-rtdb.firebaseio.com",
+  projectId: "my-calendar-e89dc",
+  storageBucket: "my-calendar-e89dc.firebasestorage.app",
+  messagingSenderId: "1040980304308",
+  appId: "1:1040980304308:web:11b00f175b05756d9d92e1"
 };
 
-// Initialize Firebase
-if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-  firebase.initializeApp(firebaseConfig);
-}
+firebase.initializeApp(firebaseConfig);
 
 let currentUser = null;
 let realtimeDB = null;
 
 function initFirebaseSync() {
-  if (firebaseConfig.apiKey === "YOUR_API_KEY") return;
-  
   realtimeDB = firebase.database();
   
   firebase.auth().onAuthStateChanged((user) => {
@@ -330,7 +323,6 @@ function initFirebaseSync() {
       btnAuthEl.innerText = '로그아웃';
       btnAuthEl.style.background = '#6c757d';
       
-      // 구글 실시간 서버 데이터 구독
       const userRef = realtimeDB.ref('users/' + user.uid + '/memos');
       userRef.on('value', (snapshot) => {
         const data = snapshot.val();
@@ -351,11 +343,6 @@ function initFirebaseSync() {
 }
 
 function toggleAuth() {
-  if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-    alert("Firebase 설정을 등록한 후 구글 로그인을 이용하실 수 있습니다.");
-    return;
-  }
-  
   if (currentUser) {
     firebase.auth().signOut().then(() => {
       alert("로그아웃되었습니다.");
@@ -819,7 +806,7 @@ function saveMemo() {
   }
   
   localStorage.setItem('my_calendar_memos', JSON.stringify(memos));
-  syncMemosToCloud(); // 구글 서버 동기화 함수 호출
+  syncMemosToCloud();
   closeModal();
   initCalendar();
   
@@ -830,7 +817,7 @@ function deleteMemo() {
   if (confirm('이 메모를 삭제하시겠습니까?')) {
     memos = memos.filter(m => m.id !== selectedMemoId);
     localStorage.setItem('my_calendar_memos', JSON.stringify(memos));
-    syncMemosToCloud(); // 구글 서버 동기화 함수 호출
+    syncMemosToCloud();
     closeModal();
     initCalendar();
   }
