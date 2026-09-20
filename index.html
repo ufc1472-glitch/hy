@@ -188,16 +188,13 @@
     const API_KEY = "$2a$10$7Z8.45KOn04z.Pj.B3H4s.9k78H4P0Yp7E1A7P6P5X6G7H8I9J0K1"; 
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-    // 고정 양력 공휴일 (무제한 적용)
     const FIXED_HOLIDAYS = {
         "1-1": "신정", "3-1": "삼일절", "5-5": "어린이날", "6-6": "현충일",
         "8-15": "광복절", "10-3": "개천절", "10-9": "한글날", "12-25": "성탄절"
     };
 
-    // 무제한 음력 변환 알고리즘 (삭망월 주기 29.5305888일 기준 영구 계산)
     function getLunarInfo(y, m, d) {
         const target = new Date(y, m - 1, d);
-        // 기준일: 2000년 1월 7일 (음력 2000년 1월 1일)
         const ref = new Date(2000, 0, 7); 
         const diffDays = Math.floor((target - ref) / (1000 * 60 * 60 * 24));
         
@@ -211,12 +208,10 @@
             monthOffset += 1;
         }
 
-        // 음력 월 계산
         let lunarMonth = ((monthOffset) % 12 + 12) % 12 + 1;
         return { month: lunarMonth, day: dayInMonth };
     }
 
-    // 24절기 무제한 계산
     function getSolarTerm(m, d) {
         const terms = {
             1: {5:"소한", 20:"대한"}, 2: {4:"입춘", 19:"우수"}, 3: {6:"경칩", 21:"춘분"}, 4: {5:"청명", 20:"곡우"},
@@ -337,16 +332,25 @@
             }
 
             const lunar = getLunarInfo(year, month, d);
+            const nextLunar = getLunarInfo(year, month, d + 1);
             let holidayName = FIXED_HOLIDAYS[shortKey] || null;
 
-            // 무제한 음력 명절 계산
-            if (lunar.month === 1 && lunar.day === 1) holidayName = "설날";
-            else if (lunar.month === 12 && lunar.day === 30) holidayName = "설날 연휴";
-            else if (lunar.month === 1 && lunar.day === 2) holidayName = "설날 연휴";
-            else if (lunar.month === 8 && lunar.day === 15) holidayName = "추석";
-            else if (lunar.month === 8 && lunar.day === 14) holidayName = "추석 연휴";
-            else if (lunar.month === 8 && lunar.day === 16) holidayName = "추석 연휴";
-            else if (lunar.month === 4 && lunar.day === 8) holidayName = "부처님오신날";
+            // 무제한 음력 명절 및 연휴 감지 로직 강화
+            if (lunar.month === 1 && lunar.day === 1) {
+                holidayName = "설날";
+            } else if (lunar.month === 12 && (lunar.day >= 29 && nextLunar.day === 1)) {
+                holidayName = "설날 연휴"; // 설날 전날
+            } else if (lunar.month === 1 && lunar.day === 2) {
+                holidayName = "설날 연휴"; // 설날 다음 날
+            } else if (lunar.month === 8 && lunar.day === 15) {
+                holidayName = "추석";
+            } else if (lunar.month === 8 && lunar.day === 14) {
+                holidayName = "추석 연휴";
+            } else if (lunar.month === 8 && lunar.day === 16) {
+                holidayName = "추석 연휴";
+            } else if (lunar.month === 4 && lunar.day === 8) {
+                holidayName = "부처님오신날";
+            }
 
             let numClass = 'date-number'; 
             if(dow === 0 || holidayName) numClass += ' sun'; 
