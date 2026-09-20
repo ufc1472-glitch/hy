@@ -10,9 +10,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  <!-- 음양력 및 24절기 정밀 계산 라이브러리 (lunar-javascript) -->
-  <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.js"></script>
-
   <style>
     * { box-sizing: border-box; font-family: 'Malgun Gothic', -apple-system, sans-serif; }
     body { background-color: #f4f6f9; margin: 0; padding: 10px; display: flex; justify-content: center; }
@@ -47,7 +44,6 @@
 
     .solar-term { font-size: 9px; color: #2f855a; background: #c6f6d5; padding: 1px 3px; border-radius: 3px; margin-top: 2px; width: fit-content; white-space: nowrap; }
     .holiday-tag { font-size: 9px; color: #9b2c2c; background: #fed7d7; padding: 1px 3px; border-radius: 3px; margin-top: 2px; width: fit-content; font-weight: bold; white-space: nowrap; }
-    .bok-tag { font-size: 9px; color: #c05621; background: #feebc8; padding: 1px 3px; border-radius: 3px; margin-top: 2px; width: fit-content; font-weight: bold; white-space: nowrap; }
     
     .event-item { 
       font-size: 11px; 
@@ -96,7 +92,7 @@
 
   <div class="nav-area">
     <button class="nav-btn" onclick="changeMonth(-1)">◀ 이전달</button>
-    <span id="month-title" class="current-month">2028년 1월</span>
+    <span id="month-title" class="current-month">2027년 11월</span>
     <button class="nav-btn" onclick="changeMonth(1)">다음달 ▶</button>
   </div>
 
@@ -180,7 +176,7 @@
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  let currentDate = new Date(2028, 0, 1);
+  let currentDate = new Date(2027, 10, 1);
   let currentUser = null;
   let selectedDateStr = "";
   
@@ -191,139 +187,63 @@
     Notification.requestPermission();
   }
 
-  setInterval(checkTimerAlerts, 30000);
-
-  function checkTimerAlerts() {
-    const now = new Date();
-    const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-    for (let dateKey in userEvents) {
-      const item = userEvents[dateKey];
-      if (!item.time) continue;
-
-      const timingOffset = parseInt(item.timing || "0", 10);
-      const targetCheckDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + timingOffset);
-      const ty = targetCheckDate.getFullYear();
-      const tm = String(targetCheckDate.getMonth() + 1).padStart(2, '0');
-      const td = String(targetCheckDate.getDate()).padStart(2, '0');
-      const targetStr = `${ty}-${tm}-${td}`;
-      const targetLunarInfo = getLunarInfo(ty, targetCheckDate.getMonth() + 1, targetCheckDate.getDate());
-
-      let isMatch = false;
-      const isLunar = item.calType === "lunar";
-
-      if (item.repeat === "yearly") {
-        if (isLunar && item.lunarMD === targetLunarInfo.mdStr) isMatch = true;
-        else if (!isLunar && dateKey.substring(5) === `${tm}-${td}`) isMatch = true;
-      } else if (item.repeat === "monthly") {
-        if (dateKey.substring(8) === td) isMatch = true;
-      } else if (dateKey === targetStr) {
-        isMatch = true;
+  // 자바스크립트 표준 Intl 엔진 기반 음력 계산 함수
+  function getExactLunarDate(year, month, day) {
+    try {
+      const dateObj = new Date(year, month - 1, day);
+      const formatter = new Intl.DateTimeFormat('ko-KR-u-ca-chinese', { month: 'numeric', day: 'numeric' });
+      const parts = formatter.formatToParts(dateObj);
+      let m = '', d = '';
+      for (const part of parts) {
+        if (part.type === 'month') m = part.value.replace('월', '').trim();
+        if (part.type === 'day') d = part.value.replace('일', '').trim();
       }
-
-      if (isMatch && item.time === currentTimeStr && !item.alerted) {
-        item.alerted = true;
-        const timingPrefix = timingOffset > 0 ? `[D-${timingOffset} 알림] ` : `[당일 알림] `;
-        const alertMsg = `⏰ ${timingPrefix}${item.memo} (${item.time})`;
-        if (Notification.permission === "granted") {
-          new Notification(alertMsg);
-        }
-        alert(alertMsg);
-      }
-    }
+      return `${m}.${d}`;
+    } catch (e) { return ''; }
   }
 
-  // --- 핵심: 음력 및 절기/명절/삼복 라이브러리 연동 함수 ---
-  function getLunarInfo(year, month, day) {
-    const solar = Solar.fromYmd(year, month, day);
-    const lunar = solar.getLunar();
-    
-    const lunarM = lunar.getMonth();
-    const lunarD = lunar.getDay();
-    const isLeap = lunar.isLeap();
-    
-    // 24절기
-    const term = solar.getJieQi() || "";
+  // 공휴일 & 절기 통합 사전
+  const holidayDB = {
+    "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", 
+    "06-06": "현충일", "08-15": "광복절", "10-03": "개천절", 
+    "10-09": "한글날", "12-25": "성탄절"
+  };
 
-    return {
-      lunarM,
-      lunarD,
-      isLeap,
-      mdStr: `${lunarM}.${lunarD}`,
-      dispStr: `${lunarM}.${lunarD}`,
-      term: term
-    };
-  }
+  // 24절기 사전
+  const termDB = {
+    "2026-01-05":"소한","2026-01-20":"대한","2026-02-04":"입춘","2026-02-19":"우수","2026-03-06":"경칩","2026-03-21":"춘분",
+    "2026-04-05":"청명","2026-04-20":"곡우","2026-05-05":"입하","2026-05-21":"소만","2026-06-06":"망종","2026-06-21":"하지",
+    "2026-07-07":"소서","2026-07-23":"대서","2026-08-07":"입추","2026-08-23":"처서","2026-09-07":"백로","2026-09-23":"추분",
+    "2026-10-08":"한로","2026-10-23":"상강","2026-11-07":"입동","2026-11-22":"소설","2026-12-07":"대설","2026-12-22":"동지",
+    "2027-01-05":"소한","2027-01-20":"대한","2027-02-04":"입춘","2027-02-19":"우수","2027-03-06":"경칩","2027-03-21":"춘분",
+    "2027-04-05":"청명","2027-04-20":"곡우","2027-05-06":"입하","2027-05-21":"소만","2027-06-06":"망종","2027-06-22":"하지",
+    "2027-07-07":"소서","2027-07-23":"대서","2027-08-08":"입추","2027-08-23":"처서","2027-09-08":"백로","2027-09-23":"추분",
+    "2027-10-08":"한로","2027-10-23":"상강","2027-11-07":"입동","2027-11-22":"소설","2027-12-07":"대설","2027-12-22":"동지",
+    "2028-01-06":"소한","2028-01-21":"대한","2028-02-04":"입춘","2028-02-19":"우수","2028-03-05":"경칩","2028-03-20":"춘분",
+    "2028-04-04":"청명","2028-04-19":"곡우","2028-05-05":"입하","2028-05-20":"소만","2028-06-05":"망종","2028-06-21":"하지",
+    "2028-07-07":"소서","2028-07-22":"대서","2028-08-07":"입추","2028-08-22":"처서","2028-09-07":"백로","2028-09-22":"추분",
+    "2028-10-08":"한로","2028-10-23":"상강","2028-11-07":"입동","2028-11-21":"소설","2028-12-06":"대설","2028-12-21":"동지"
+  };
 
-  // 대한민국 공휴일 및 명절 완벽 자동 계산 엔진
-  function getKoreanHoliday(year, month, day, lunarM, lunarD, isLeap) {
+  function getHolidayName(year, month, day, lunarMD) {
     const mm = String(month).padStart(2, '0');
     const dd = String(day).padStart(2, '0');
-    const key = `${mm}-${dd}`;
+    const dateStr = `${year}-${mm}-${dd}`;
+    const mdStr = `${mm}-${dd}`;
 
-    // 고정 양력 공휴일
-    const fixedHolidays = {
-      "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", "06-06": "현충일",
-      "08-15": "광복절", "10-03": "개천절", "10-09": "한글날", "12-25": "성탄절"
-    };
-    if (fixedHolidays[key]) return fixedHolidays[key];
+    if (holidayDB[mdStr]) return holidayDB[mdStr];
 
-    // 음력 명절 (윤달 제외)
-    if (!isLeap) {
-      if (lunarM === 1) {
-        if (lunarD === 1) return "설날";
-        if (lunarD === 2) return "설날 연휴";
-      }
-      if (lunarM === 12) {
-        // 설날 전날 (음력 12월 마지막 날)
-        const nextDaySolar = Solar.fromYmd(year, month, day).next(1);
-        const nextLunar = nextDaySolar.getLunar();
-        if (nextLunar.getMonth() === 1 && nextLunar.getDay() === 1) return "설날 연휴";
-      }
-      if (lunarM === 4 && lunarD === 8) return "부처님오신날";
-      if (lunarM === 8) {
-        if (lunarD === 14) return "추석 연휴";
-        if (lunarD === 15) return "추석";
-        if (lunarD === 16) return "추석 연휴";
-      }
-    }
+    // 음력 주요 명절 (설날, 추석, 석가탄신일)
+    if (lunarMD === "1.1") return "설날";
+    if (lunarMD === "8.15") return "추석";
+    if (lunarMD === "4.8") return "부처님오신날";
 
-    // 대체공휴일 자동 판별 규칙
-    const dt = new Date(year, month - 1, day);
-    const dayOfWeek = dt.getDay(); // 0:일, 1:월
+    // 연휴 자동 판단
+    const prevLunar = getExactLunarDate(year, month, day - 1);
+    const nextLunar = getExactLunarDate(year, month, day + 1);
+    if (nextLunar === "1.1" || prevLunar === "1.1") return "설날 연휴";
+    if (nextLunar === "8.15" || prevLunar === "8.15") return "추석 연휴";
 
-    // 설날/추석/어린이날/부처님오신날/광복절/개천절/한글날 등이 주말과 겹칠 때 대체공휴일 처리
-    if (dayOfWeek === 1) { // 월요일인 경우 이전 일요일이 공휴일이었는지 체크
-      const prev1 = Solar.fromYmd(year, month, day).next(-1);
-      const p1L = prev1.getLunar();
-      const p1H = getKoreanHoliday(prev1.getYear(), prev1.getMonth(), prev1.getDay(), p1L.getMonth(), p1L.getDay(), p1L.isLeap());
-      
-      if (p1H && (p1H.includes("설날") || p1H.includes("추석") || p1H === "어린이날" || p1H === "부처님오신날" || p1H === "광복절" || p1H === "개천절" || p1H === "한글날")) {
-        return "대체공휴일";
-      }
-    }
-
-    return "";
-  }
-
-  // 삼복(초복, 중복, 말복) 자동 계산
-  function getBokDay(year, month, day) {
-    const solar = Solar.fromYmd(year, month, day);
-    // 하지(6월 경) 이후 천간 경일 계산
-    // 근사 간이계산 및 라이브러리 조합
-    const lunar = solar.getLunar();
-    const jieQi = lunar.getJieQiTable();
-    
-    // 복날 표시를 위한 주요 절기 체크
-    const term = solar.getJieQi();
-    if (month === 7 || month === 8) {
-      // 7~8월 주요 삼복 표시
-      const dayGan = lunar.getDayGan();
-      if (dayGan === "庚") {
-        // 하지 후 3번째, 4번째, 입추 후 1번째 경일
-        // 직관적인 절기 표기를 제공
-      }
-    }
     return "";
   }
 
@@ -368,7 +288,7 @@
     renderCalendar();
   }
 
-  function getEventForDate(year, month, day, lunarInfo) {
+  function getEventForDate(year, month, day, lunarMD) {
     const mm = String(month).padStart(2, '0');
     const dd = String(day).padStart(2, '0');
     const fullKey = `${year}-${mm}-${dd}`;
@@ -383,7 +303,7 @@
       if (key === fullKey) {
         eventList.push(item);
       } else if (item.repeat === 'yearly') {
-        if (isLunar && item.lunarMD && item.lunarMD === lunarInfo.mdStr) {
+        if (isLunar && item.lunarMD && item.lunarMD === lunarMD) {
           eventList.push(item);
         } else if (!isLunar && key.substring(5) === monthDayKey) {
           eventList.push(item);
@@ -419,8 +339,9 @@
       const dd = String(date).padStart(2, '0');
       const dateStr = `${year}-${mm}-${dd}`;
       
-      const lunarInfo = getLunarInfo(year, month + 1, date);
-      const holidayName = getKoreanHoliday(year, month + 1, date, lunarInfo.lunarM, lunarInfo.lunarD, lunarInfo.isLeap);
+      const lunarMD = getExactLunarDate(year, month + 1, date);
+      const holidayName = getHolidayName(year, month + 1, date, lunarMD);
+      const termName = termDB[dateStr] || "";
 
       let dayClass = "date-cell";
       if (dayOfWeek === 0 || holidayName) dayClass += " sun holiday";
@@ -428,11 +349,11 @@
 
       cell.className = dayClass;
 
-      const matchedEvents = getEventForDate(year, month + 1, date, lunarInfo);
+      const matchedEvents = getEventForDate(year, month + 1, date, lunarMD);
 
       let extraHtml = "";
       if (holidayName) extraHtml += `<div class="holiday-tag">🔴 ${holidayName}</div>`;
-      if (lunarInfo.term) extraHtml += `<div class="solar-term">🥬 ${lunarInfo.term}</div>`;
+      if (termName) extraHtml += `<div class="solar-term">🥬 ${termName}</div>`;
       
       matchedEvents.forEach(evt => {
         let typeBadge = evt.calType === 'lunar' ? '(음) ' : '';
@@ -443,19 +364,19 @@
       cell.innerHTML = `
         <div class="date-header-row">
           <span class="date-num">${date}</span>
-          <span class="lunar-text">(${lunarInfo.dispStr})</span>
+          <span class="lunar-text">(${lunarMD})</span>
         </div>
         ${extraHtml}
       `;
 
-      cell.onclick = () => openModal(dateStr, year, month + 1, date, lunarInfo);
+      cell.onclick = () => openModal(dateStr, year, month + 1, date, lunarMD);
       calendarDays.appendChild(cell);
     }
   }
 
-  function openModal(dateStr, y, m, d, lunarInfo) {
+  function openModal(dateStr, y, m, d, lunarMD) {
     selectedDateStr = dateStr;
-    document.getElementById("modalDateTitle").innerText = `${dateStr} (음력 ${lunarInfo.dispStr}) 일정 설정`;
+    document.getElementById("modalDateTitle").innerText = `${dateStr} (음력 ${lunarMD}) 일정 설정`;
     
     const existing = userEvents[dateStr] || {};
     document.getElementById("inputMemo").value = existing.memo || (typeof existing === 'string' ? existing : "");
@@ -481,12 +402,12 @@
     const time = document.getElementById("inputTime").value;
 
     const parts = selectedDateStr.split('-');
-    const lunarInfo = getLunarInfo(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
+    const lunarMD = getExactLunarDate(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
 
     if (memo === "") {
       delete userEvents[selectedDateStr];
     } else {
-      userEvents[selectedDateStr] = { memo, color, calType, repeat, timing, time, lunarMD: lunarInfo.mdStr, alerted: false };
+      userEvents[selectedDateStr] = { memo, color, calType, repeat, timing, time, lunarMD, alerted: false };
     }
 
     if (currentUser) {
