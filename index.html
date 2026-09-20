@@ -115,6 +115,15 @@
       </select>
     </div>
     <div class="form-group">
+      <label>알림 시점 선택</label>
+      <select id="selectAlertTiming">
+        <option value="0">당일 알림</option>
+        <option value="1">1일 전 (전일) 알림</option>
+        <option value="2">2일 전 알림</option>
+        <option value="3">3일 전 알림</option>
+      </select>
+    </div>
+    <div class="form-group">
       <label>알림 시간 설정</label>
       <input type="time" id="inputTime">
     </div>
@@ -145,12 +154,12 @@
   let selectedDateStr = "";
   
   let userEvents = {
-    "2026-09-14": { memo: "서부본부 교육", calType: "solar", repeat: "none", time: "09:00" },
-    "2026-09-18": { memo: "서부본부 교육14:00", calType: "solar", repeat: "none", time: "14:00" },
-    "2026-09-29": { memo: "경환 생일", calType: "solar", repeat: "yearly", time: "09:00" },
-    "2026-10-04": { memo: "집사람 탄신일", calType: "solar", repeat: "yearly", time: "09:00" },
-    "2026-10-16": { memo: "장모님 생신", calType: "lunar", repeat: "yearly", time: "09:00" },
-    "2026-10-25": { memo: "매부생일", calType: "solar", repeat: "yearly", time: "09:00" }
+    "2026-09-14": { memo: "서부본부 교육", calType: "solar", repeat: "none", timing: "0", time: "09:00" },
+    "2026-09-18": { memo: "서부본부 교육14:00", calType: "solar", repeat: "none", timing: "0", time: "14:00" },
+    "2026-09-29": { memo: "경환 생일", calType: "solar", repeat: "yearly", timing: "0", time: "09:00" },
+    "2026-10-04": { memo: "집사람 탄신일", calType: "solar", repeat: "yearly", timing: "0", time: "09:00" },
+    "2026-10-16": { memo: "장모님 생신", calType: "lunar", repeat: "yearly", timing: "1", time: "09:00" },
+    "2026-10-25": { memo: "매부생일", calType: "solar", repeat: "yearly", timing: "0", time: "09:00" }
   };
   let calendarTitle = "PRO 스마트 달력";
 
@@ -158,37 +167,43 @@
     Notification.requestPermission();
   }
 
-  // 알림 타이머 체크
+  // 알림 타이머 (전일/당일 계산 포함)
   setInterval(checkTimerAlerts, 30000);
 
   function checkTimerAlerts() {
     const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
     const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const todayStr = `${y}-${m}-${d}`;
-    const todayLunarStr = getExactLunarDate(y, now.getMonth() + 1, now.getDate());
 
     for (let dateKey in userEvents) {
       const item = userEvents[dateKey];
       if (!item.time) continue;
 
-      let isToday = false;
+      const timingOffset = parseInt(item.timing || "0", 10);
+      
+      // 오늘 날짜 기준으로 offset만큼 더한 날짜(이벤트 목표일) 구하기
+      const targetCheckDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + timingOffset);
+      const ty = targetCheckDate.getFullYear();
+      const tm = String(targetCheckDate.getMonth() + 1).padStart(2, '0');
+      const td = String(targetCheckDate.getDate()).padStart(2, '0');
+      const targetStr = `${ty}-${tm}-${td}`;
+      const targetLunarMD = getExactLunarDate(ty, targetCheckDate.getMonth() + 1, targetCheckDate.getDate());
+
+      let isMatch = false;
       const isLunar = item.calType === "lunar";
 
       if (item.repeat === "yearly") {
-        if (isLunar && item.lunarMD === todayLunarStr) isToday = true;
-        else if (!isLunar && dateKey.substring(5) === `${m}-${d}`) isToday = true;
+        if (isLunar && item.lunarMD === targetLunarMD) isMatch = true;
+        else if (!isLunar && dateKey.substring(5) === `${tm}-${td}`) isMatch = true;
       } else if (item.repeat === "monthly") {
-        if (dateKey.substring(8) === d) isToday = true;
-      } else if (dateKey === todayStr) {
-        isToday = true;
+        if (dateKey.substring(8) === td) isMatch = true;
+      } else if (dateKey === targetStr) {
+        isMatch = true;
       }
 
-      if (isToday && item.time === currentTimeStr && !item.alerted) {
+      if (isMatch && item.time === currentTimeStr && !item.alerted) {
         item.alerted = true;
-        const alertMsg = `⏰ [알림] ${item.memo} (${item.time})`;
+        const timingPrefix = timingOffset > 0 ? `[D-${timingOffset} 알림] ` : `[당일 알림] `;
+        const alertMsg = `⏰ ${timingPrefix}${item.memo} (${item.time})`;
         if (Notification.permission === "granted") {
           new Notification(alertMsg);
         }
@@ -277,7 +292,7 @@
     let eventList = [];
 
     for (let key in userEvents) {
-      const item = typeof userEvents[key] === 'string' ? { memo: userEvents[key], calType: 'solar', repeat: 'none', time: '' } : userEvents[key];
+      const item = typeof userEvents[key] === 'string' ? { memo: userEvents[key], calType: 'solar', repeat: 'none', timing: '0', time: '' } : userEvents[key];
       const isLunar = item.calType === 'lunar';
 
       if (key === fullKey) {
@@ -338,8 +353,9 @@
       matchedEvents.forEach(evt => {
         let typeBadge = evt.calType === 'lunar' ? '(음)' : '';
         let repeatIcon = evt.repeat === 'yearly' ? '🔄매년 ' : (evt.repeat === 'monthly' ? '🔄매월 ' : '');
+        let timingBadge = evt.timing && evt.timing !== '0' ? `[${evt.timing}일전알림]` : '';
         let timeText = evt.time ? ` [${evt.time}]` : '';
-        extraHtml += `<div class="event-item">📌 ${typeBadge}${repeatIcon}${evt.memo}${timeText}</div>`;
+        extraHtml += `<div class="event-item">📌 ${typeBadge}${repeatIcon}${evt.memo}${timingBadge}${timeText}</div>`;
       });
 
       cell.innerHTML = `
@@ -364,6 +380,7 @@
     document.getElementById("inputMemo").value = existing.memo || (typeof existing === 'string' ? existing : "");
     document.getElementById("selectCalendarType").value = existing.calType || "solar";
     document.getElementById("selectRepeat").value = existing.repeat || "none";
+    document.getElementById("selectAlertTiming").value = existing.timing || "0";
     document.getElementById("inputTime").value = existing.time || "";
 
     document.getElementById("eventModal").style.display = "flex";
@@ -377,6 +394,7 @@
     const memo = document.getElementById("inputMemo").value.trim();
     const calType = document.getElementById("selectCalendarType").value;
     const repeat = document.getElementById("selectRepeat").value;
+    const timing = document.getElementById("selectAlertTiming").value;
     const time = document.getElementById("inputTime").value;
 
     const parts = selectedDateStr.split('-');
@@ -385,7 +403,7 @@
     if (memo === "") {
       delete userEvents[selectedDateStr];
     } else {
-      userEvents[selectedDateStr] = { memo, calType, repeat, time, lunarMD, alerted: false };
+      userEvents[selectedDateStr] = { memo, calType, repeat, timing, time, lunarMD, alerted: false };
     }
 
     if (currentUser) {
