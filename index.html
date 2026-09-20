@@ -137,7 +137,7 @@
 
     <div class="calendar-container" id="calendarContainer">
         <div class="sync-bar">
-            <span>🌐 기기 간 실시간 동기화 중</span>
+            <span>🌐 무제한 기기 간 실시간 동기화 중</span>
             <span id="syncStatus" class="sync-status">● 연결됨</span>
             <button onclick="loadCloudData()" style="padding:2px 8px; font-size:0.75rem; background:#34495e;">🔄 새로고침</button>
         </div>
@@ -197,20 +197,7 @@
         "8-15": "광복절", "10-3": "개천절", "10-9": "한글날", "12-25": "성탄절"
     };
 
-    // 한국천문연구원 공식 기준 정밀 설날/추석 연휴 맵핑 (2028년 설날: 1월 27일, 연휴: 1월 26일~28일 완벽 반영)
-    const EXACT_SPECIAL_DAYS = {
-        "2026-02-17": {m:1, d:1, name:"설날"}, "2026-02-16": {name:"설날 연휴"}, "2026-02-18": {name:"설날 연휴"},
-        "2026-09-25": {m:8, d:15, name:"추석"}, "2026-09-24": {name:"추석 연휴"}, "2026-09-26": {name:"추석 연휴"},
-        "2027-02-06": {m:1, d:1, name:"설날"}, "2027-02-05": {name:"설날 연휴"}, "2027-02-07": {name:"설날 연휴"},
-        "2027-09-15": {m:8, d:15, name:"추석"}, "2027-09-14": {name:"추석 연휴"}, "2027-09-16": {name:"추석 연휴"},
-        "2028-01-27": {m:1, d:1, name:"설날"}, "2028-01-26": {name:"설날 연휴"}, "2028-01-28": {name:"설날 연휴"},
-        "2028-10-03": {m:8, d:15, name:"추석"}, "2028-10-02": {name:"추석 연휴"}, "2028-10-04": {name:"추석 연휴"},
-        "2029-02-13": {m:1, d:1, name:"설날"}, "2029-02-12": {name:"설날 연휴"}, "2029-02-14": {name:"설날 연휴"},
-        "2029-09-22": {m:8, d:15, name:"추석"}, "2029-09-21": {name:"추석 연휴"}, "2029-09-23": {name:"추석 연휴"},
-        "2030-02-03": {m:1, d:1, name:"설날"}, "2030-02-02": {name:"설날 연휴"}, "2030-02-04": {name:"설날 연휴"},
-        "2030-09-12": {m:8, d:15, name:"추석"}, "2030-09-11": {name:"추석 연휴"}, "2030-09-13": {name:"추석 연휴"}
-    };
-
+    // 1900년부터 2050년까지 무제한 연도 지원을 위한 천문학적 음력 변환 테이블 (LUNAR_DATA)
     const LUNAR_DATA = [
         0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
         0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
@@ -230,7 +217,7 @@
         0x14b63
     ];
 
-    function getExactLunarInfo(solYear, solMonth, solDay) {
+    function getLunarInfo(solYear, solMonth, solDay) {
         let baseDate = new Date(1900, 0, 31);
         let targetDate = new Date(solYear, solMonth - 1, solDay);
         let offset = Math.round((targetDate - baseDate) / 86400000);
@@ -261,7 +248,7 @@
         }
         if (offset < 0) { offset += temp; --i; }
 
-        return { month: i, day: offset + 1, isLeap: isLeap };
+        return { year: lYear, month: i, day: offset + 1, isLeap: isLeap };
 
         function lYearDays(y) {
             let sum = 348;
@@ -271,6 +258,49 @@
         function leapDays(y) { return leapMonth(y) ? ((LUNAR_DATA[y - 1900] & 0x10000) ? 30 : 29) : 0; }
         function leapMonth(y) { return LUNAR_DATA[y - 1900] & 0xf; }
         function monthDays(y, m) { return (LUNAR_DATA[y - 1900] & (0x10000 >> m)) ? 30 : 29; }
+    }
+
+    // 특정 음력 날짜(예: 설날 음 1.1, 추석 음 8.15)에 해당하는 양력 날짜를 정확히 역산하여 찾아내는 무제한 명절 판별 엔진
+    function getLunarHoliday(year, month, day) {
+        let start = new Date(year, 0, 1);
+        let end = new Date(year, 11, 31);
+        
+        let targetLunarM = (month === 1 && day === 1) ? 1 : (month === 8 && day === 15) ? 8 : 0;
+        let targetLunarD = (month === 1 && day === 1) ? 1 : (month === 8 && day === 15) ? 15 : 0;
+
+        // 설날 연휴(설날 당일, 전날, 다음날) 및 추석 연휴(추석 당일, 전날, 다음날) 판별
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            let y = d.getFullYear();
+            let m = d.getMonth() + 1;
+            let dayNum = d.getDate();
+            let l = getLunarInfo(y, m, dayNum);
+
+            // 설날 당일 (음력 1월 1일)
+            if (l.month === 1 && l.day === 1 && !l.isLeap) {
+                if (year === y) {
+                    if (month === m && day === dayNum) return "설날";
+                    // 설날 전날 연휴
+                    let prevD = new Date(y, m - 1, dayNum - 1);
+                    if (prevD.getFullYear() === year && prevD.getMonth() + 1 === month && prevD.getDate() === day) return "설날 연휴";
+                    // 설날 다음날 연휴
+                    let nextD = new Date(y, m - 1, dayNum + 1);
+                    if (nextD.getFullYear() === year && nextD.getMonth() + 1 === month && nextD.getDate() === day) return "설날 연휴";
+                }
+            }
+            // 추석 당일 (음력 8월 15일)
+            if (l.month === 8 && l.day === 15 && !l.isLeap) {
+                if (year === y) {
+                    if (month === m && day === dayNum) return "추석";
+                    // 추석 전날 연휴
+                    let prevD = new Date(y, m - 1, dayNum - 1);
+                    if (prevD.getFullYear() === year && prevD.getMonth() + 1 === month && prevD.getDate() === day) return "추석 연휴";
+                    // 추석 다음날 연휴
+                    let nextD = new Date(y, m - 1, dayNum + 1);
+                    if (nextD.getFullYear() === year && nextD.getMonth() + 1 === month && nextD.getDate() === day) return "추석 연휴";
+                }
+            }
+        }
+        return null;
     }
 
     function getSolarTerm(m, d) {
@@ -383,17 +413,8 @@
                 cell.classList.add('today-cell');
             }
 
-            let lunar = getExactLunarInfo(year, month, d);
-            let holidayName = FIXED_HOLIDAYS[shortKey] || null;
-
-            if (EXACT_SPECIAL_DAYS[dateStr]) {
-                if (EXACT_SPECIAL_DAYS[dateStr].m) {
-                    lunar.month = EXACT_SPECIAL_DAYS[dateStr].m;
-                    lunar.day = EXACT_SPECIAL_DAYS[dateStr].d;
-                    lunar.isLeap = false;
-                }
-                holidayName = EXACT_SPECIAL_DAYS[dateStr].name;
-            }
+            let lunar = getLunarInfo(year, month, d);
+            let holidayName = FIXED_HOLIDAYS[shortKey] || getLunarHoliday(year, month, d);
 
             let numClass = 'date-number'; 
             if(dow === 0 || holidayName) numClass += ' sun'; 
