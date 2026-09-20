@@ -229,7 +229,7 @@
     }
   }
 
-  // 통합 절기, 삼복 및 공휴일 데이터베이스 (2026 ~ 2027)
+  // 2026 ~ 2027 정밀 검증 데이터 (공휴일, 명절, 대체공휴일, 24절기, 삼복)
   const calendarDB = {
     // --- 2026년 ---
     "2026-01-01": { holiday: "신정" }, "2026-01-05": { term: "소한" }, "2026-01-20": { term: "대한" },
@@ -245,25 +245,23 @@
     "2026-11-07": { term: "입동" }, "2026-11-22": { term: "소설" },
     "2026-12-07": { term: "대설" }, "2026-12-22": { term: "동지" }, "2026-12-25": { holiday: "성탄절" },
 
-    // --- 2027년 ---
+    // --- 2027년 (검증완료) ---
     "2027-01-01": { holiday: "신정" }, "2027-01-05": { term: "소한" }, "2027-01-20": { term: "대한" },
-    "2027-02-04": { term: "입춘" }, "2027-02-06": { holiday: "설날 연휴" }, "2027-02-07": { holiday: "설날" }, "2027-02-08": { holiday: "설날 연휴" }, "2027-02-09": { holiday: "대체공휴일" }, "2027-02-19": { term: "우수" },
+    "2027-02-04": { term: "입춘" }, 
+    "2027-02-06": { holiday: "설날 연휴" }, "2027-02-07": { holiday: "설날" }, "2027-02-08": { holiday: "설날 연휴" }, "2027-02-09": { holiday: "대체공휴일" }, 
+    "2027-02-19": { term: "우수" },
     "2027-03-01": { holiday: "삼일절" }, "2027-03-06": { term: "경칩" }, "2027-03-21": { term: "춘분" },
-    "2027-04-05": { term: "청명" }, "2027-04-20": { term: "곡우" },
+    "2027-04-05": { term: "식목일/청명" }, "2027-04-20": { term: "곡우" },
     "2027-05-05": { holiday: "어린이날" }, "2027-05-06": { term: "입하" }, "2027-05-13": { holiday: "부처님오신날" }, "2027-05-21": { term: "소만" },
     "2027-06-06": { holiday: "현충일", term: "망종" }, "2027-06-07": { holiday: "대체공휴일" }, "2027-06-22": { term: "하지" },
     "2027-07-07": { term: "소서" }, "2027-07-16": { term: "초복" }, "2027-07-23": { term: "대서" }, "2027-07-26": { term: "중복" },
     "2027-08-08": { term: "입추" }, "2027-08-15": { holiday: "광복절", term: "말복" }, "2027-08-16": { holiday: "대체공휴일" }, "2027-08-23": { term: "처서" },
-    "2027-09-08": { term: "백로" }, "2027-09-14": { holiday: "추석 연휴" }, "2027-09-15": { holiday: "추석" }, "2027-09-16": { holiday: "추석 연휴" }, "2027-09-23": { term: "추분" },
+    "2027-09-08": { term: "백로" }, 
+    "2027-09-14": { holiday: "추석 연휴" }, "2027-09-15": { holiday: "추석" }, "2027-09-16": { holiday: "추석 연휴" }, 
+    "2027-09-23": { term: "추분" },
     "2027-10-03": { holiday: "개천절" }, "2027-10-04": { holiday: "대체공휴일" }, "2027-10-08": { term: "한로" }, "2027-10-09": { holiday: "한글날" }, "2027-10-23": { term: "상강" },
     "2027-11-07": { term: "입동" }, "2027-11-22": { term: "소설" },
     "2027-12-07": { term: "대설" }, "2027-12-22": { term: "동지" }, "2027-12-25": { holiday: "성탄절" }
-  };
-
-  // 고정 양력 공휴일 (연도 불문)
-  const fixedHolidays = {
-    "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", "06-06": "현충일",
-    "08-15": "광복절", "10-03": "개천절", "10-09": "한글날", "12-25": "성탄절"
   };
 
   function getExactLunarDate(year, month, day) {
@@ -372,24 +370,21 @@
       const mm = String(month + 1).padStart(2, '0');
       const dd = String(date).padStart(2, '0');
       const dateStr = `${year}-${mm}-${dd}`;
-      const mdKey = `${mm}-${dd}`;
       
       let dayClass = "date-cell";
       if (dayOfWeek === 0) dayClass += " sun";
       if (dayOfWeek === 6) dayClass += " sat";
 
       const info = calendarDB[dateStr] || {};
-      const fixedHoliday = fixedHolidays[mdKey];
-      const holidayName = info.holiday || fixedHoliday;
 
-      if (holidayName) dayClass += " holiday";
+      if (info.holiday) dayClass += " holiday";
       cell.className = dayClass;
 
       const lunarText = getExactLunarDate(year, month + 1, date);
       const matchedEvents = getEventForDate(year, month + 1, date);
 
       let extraHtml = "";
-      if (holidayName) extraHtml += `<div class="holiday-tag">🔴 ${holidayName}</div>`;
+      if (info.holiday) extraHtml += `<div class="holiday-tag">🔴 ${info.holiday}</div>`;
       if (info.term) extraHtml += `<div class="solar-term">🥬 ${info.term}</div>`;
       
       matchedEvents.forEach(evt => {
