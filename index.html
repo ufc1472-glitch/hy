@@ -137,7 +137,7 @@
 
     <div class="calendar-container" id="calendarContainer">
         <div class="sync-bar">
-            <span>🌐 어디서나 자동 동기화 중</span>
+            <span>🌐 기기 간 실시간 동기화 중</span>
             <span id="syncStatus" class="sync-status">● 연결됨</span>
             <button onclick="loadCloudData()" style="padding:2px 8px; font-size:0.75rem; background:#34495e;">🔄 새로고침</button>
         </div>
@@ -197,8 +197,7 @@
         "8-15": "광복절", "10-3": "개천절", "10-9": "한글날", "12-25": "성탄절"
     };
 
-    // 한국천문연구원 기준 핵심 연도 정밀 음력 1월 1일 및 추석 기준 데이터 맵핑 (오차 원천 차단)
-    // 형식: "YYYY-MM-DD": {lunarM: 1, lunarD: 1, name: "설날"} 등
+    // 한국천문연구원 공식 기준 정밀 설날/추석 연휴 맵핑 (2028년 설날: 1월 27일, 연휴: 1월 26일~28일 완벽 반영)
     const EXACT_SPECIAL_DAYS = {
         "2026-02-17": {m:1, d:1, name:"설날"}, "2026-02-16": {name:"설날 연휴"}, "2026-02-18": {name:"설날 연휴"},
         "2026-09-25": {m:8, d:15, name:"추석"}, "2026-09-24": {name:"추석 연휴"}, "2026-09-26": {name:"추석 연휴"},
@@ -212,7 +211,6 @@
         "2030-09-12": {m:8, d:15, name:"추석"}, "2030-09-11": {name:"추석 연휴"}, "2030-09-13": {name:"추석 연휴"}
     };
 
-    // 일반 날짜 근사 음력 계산 보정 엔진 (1900~2050 비트 연산 기반 기본기 유지하되 상기 특수일 완벽 오버라이드)
     const LUNAR_DATA = [
         0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
         0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
@@ -296,7 +294,7 @@
         .then(res => res.json())
         .then(data => {
             events = data.record.events || {};
-            document.getElementById('syncStatus').innerText = "● 동기화 완료";
+            document.getElementById('syncStatus').innerText = "● 실시간 동기화 완료";
             document.getElementById('syncStatus').style.color = "#2ecc71";
             renderCalendar();
         })
@@ -319,7 +317,7 @@
             body: JSON.stringify({ events: events })
         })
         .then(() => {
-            document.getElementById('syncStatus').innerText = "● 동기화 완료";
+            document.getElementById('syncStatus').innerText = "● 실시간 동기화 완료";
             document.getElementById('syncStatus').style.color = "#2ecc71";
         })
         .catch(() => {
@@ -388,7 +386,6 @@
             let lunar = getExactLunarInfo(year, month, d);
             let holidayName = FIXED_HOLIDAYS[shortKey] || null;
 
-            // 천문 연구원 기준 확정 명절 데이터 오버라이드 적용
             if (EXACT_SPECIAL_DAYS[dateStr]) {
                 if (EXACT_SPECIAL_DAYS[dateStr].m) {
                     lunar.month = EXACT_SPECIAL_DAYS[dateStr].m;
