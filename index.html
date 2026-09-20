@@ -27,13 +27,23 @@
         button, label.btn { padding: 8px 12px; border: none; border-radius: 6px; background-color: var(--primary-color); color: white; cursor: pointer; font-size: 0.85rem; }
         button:hover, label.btn:hover { opacity: 0.9; }
 
-        .month-nav { display: flex; justify-content: center; align-items: center; gap: 20px; margin: 15px 0; font-size: 1.4rem; font-weight: bold; }
+        .month-nav { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 15px 0; font-size: 1.4rem; font-weight: bold; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: #ccc; border: 1px solid #ccc; border-radius: 8px; overflow: hidden; }
         .day-header { background: #f4f4f6; padding: 10px; text-align: center; font-weight: bold; }
         .day-header.sun { color: #e74c3c; } .day-header.sat { color: #2980b9; }
 
-        .day-cell { background: white; min-height: 105px; padding: 6px; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; }
+        .day-cell { background: white; min-height: 105px; padding: 6px; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; position: relative; }
         .day-cell:hover { background: #f0f7ff; }
+
+        /* 오늘 날짜 셀 강조 스타일 */
+        .day-cell.today-cell {
+            background-color: #f0f3ff !important;
+            border: 2px solid #e67e22 !important;
+        }
+        .today-badge {
+            background-color: #e67e22; color: white; font-size: 0.7rem; font-weight: bold;
+            padding: 2px 5px; border-radius: 4px; margin-left: 5px; vertical-align: middle;
+        }
 
         .date-number { font-weight: bold; font-size: 1rem; }
         .sun { color: #e74c3c; } .sat { color: #2980b9; } .holiday { color: #e74c3c; font-weight: bold; }
@@ -73,6 +83,7 @@
         <div class="month-nav">
             <button onclick="moveMonth(-1)">◀ 이전달</button>
             <span id="currentYearMonth"></span>
+            <button onclick="goToToday()" style="background:#e67e22;">오늘</button>
             <button onclick="moveMonth(1)">다음달 ▶</button>
         </div>
 
@@ -106,8 +117,6 @@
     </div>
 
 <script>
-    // --- 1. 공유 클라우드 저장소 (JSONBin API) 설정 ---
-    // 고유 공유 키 (로그인 없이 이 키를 가진 달력끼리 내용 공유)
     const BIN_ID = "66d5b085e41b4d34e427d19a";
     const API_KEY = "$2a$10$7Z8.45KOn04z.Pj.B3H4s.9k78H4P0Yp7E1A7P6P5X6G7H8I9J0K1"; 
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -145,7 +154,6 @@
     let selectedCellDate = null;
     let events = {};
 
-    // 데이터 불러오기
     function loadCloudData() {
         document.getElementById('syncStatus').innerText = "🔄 동기화 중...";
         document.getElementById('syncStatus').style.color = "#f39c12";
@@ -161,7 +169,6 @@
             renderCalendar();
         })
         .catch(() => {
-            // 인터넷 연결 실패 시 로컬스토리지 백업 데이터 사용
             const localData = localStorage.getItem('calendar_events');
             if(localData) events = JSON.parse(localData);
             document.getElementById('syncStatus').innerText = "● 오프라인 모드";
@@ -170,7 +177,6 @@
         });
     }
 
-    // 데이터 저장하기
     function saveCloudData() {
         document.getElementById('syncStatus').innerText = "💾 저장 중...";
         localStorage.setItem('calendar_events', JSON.stringify(events));
@@ -209,10 +215,19 @@
 
     function moveMonth(delta) { currentDate.setMonth(currentDate.getMonth() + delta); renderCalendar(); }
 
+    function goToToday() {
+        currentDate = new Date();
+        renderCalendar();
+    }
+
     function renderCalendar() {
         const grid = document.getElementById('calendarGrid'); grid.innerHTML = '';
         const year = currentDate.getFullYear(), month = currentDate.getMonth() + 1;
         document.getElementById('currentYearMonth').innerText = `${year}년 ${month}월`;
+
+        const today = new Date();
+        const isCurrentMonth = today.getFullYear() === year && (today.getMonth() + 1) === month;
+        const todayDate = today.getDate();
 
         ['일', '월', '화', '수', '목', '금', '토'].forEach((d, idx) => {
             const h = document.createElement('div'); h.className = `day-header ${idx===0?'sun':idx===6?'sat':''}`; h.innerText = d; grid.appendChild(h);
@@ -227,6 +242,11 @@
             const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             const shortKey = `${month}-${d}`;
 
+            // 오늘 날짜인 경우 강조 표시 추가
+            if (isCurrentMonth && d === todayDate) {
+                cell.classList.add('today-cell');
+            }
+
             let numClass = 'date-number'; 
             if(dow === 0) numClass += ' sun'; 
             if(dow === 6) numClass += ' sat';
@@ -237,7 +257,11 @@
 
             if(holidayName) numClass += ' holiday';
 
-            let cellHTML = `<span class="${numClass}">${d}</span><span class="lunar-info">${lunarStr}</span>`;
+            let cellHTML = `<span class="${numClass}">${d}</span>`;
+            if (isCurrentMonth && d === todayDate) {
+                cellHTML += `<span class="today-badge">오늘</span>`;
+            }
+            cellHTML += `<span class="lunar-info">${lunarStr}</span>`;
             if(solarTerm) cellHTML += `<span class="solar-term">${solarTerm}</span>`;
             if(holidayName) cellHTML += `<span class="holiday" style="font-size:0.75rem;">${holidayName}</span>`;
 
@@ -296,7 +320,6 @@
         const savedTitle = localStorage.getItem('calendar_title'); if(savedTitle) document.getElementById('displayCalendarTitle').innerText = savedTitle;
         const savedBg = localStorage.getItem('calendar_bg'); if(savedBg) document.body.style.backgroundImage = `url(${savedBg})`;
         loadCloudData();
-        // 10초마다 자동 실시간 동기화
         setInterval(loadCloudData, 10000);
     }
 </script>
