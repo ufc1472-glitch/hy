@@ -97,50 +97,50 @@
   let currentUser = null;
   let userEvents = {};
 
+  // 주요 공휴일 및 절기 정보
   const fixedInfo = {
+    // 2026년
     "2026-01-01": { holiday: "신정" },
-    "2026-01-05": { term: "소한" },
-    "2026-01-20": { term: "대한" },
-    "2026-02-04": { term: "입춘" },
-    "2026-02-16": { holiday: "설날 연휴" },
-    "2026-02-17": { holiday: "설날" },
-    "2026-02-18": { holiday: "설날 연휴" },
-    "2026-02-19": { term: "우수" },
-    "2026-03-01": { holiday: "삼일절" },
-    "2026-03-02": { holiday: "대체공휴일" },
-    "2026-03-06": { term: "경칩" },
-    "2026-03-21": { term: "춘분" },
-    "2026-04-05": { term: "청명" },
-    "2026-04-20": { term: "곡우" },
+    "2026-02-16": { holiday: "설날 연휴" }, "2026-02-17": { holiday: "설날" }, "2026-02-18": { holiday: "설날 연휴" },
+    "2026-03-01": { holiday: "삼일절" }, "2026-03-02": { holiday: "대체공휴일" },
     "2026-05-05": { holiday: "어린이날", term: "입하" },
-    "2026-05-21": { term: "소만" },
-    "2026-05-24": { holiday: "부처님오신날" },
-    "2026-05-25": { holiday: "대체공휴일" },
-    "2026-06-06": { holiday: "현충일", term: "망종" },
-    "2026-06-21": { term: "하지" },
-    "2026-07-07": { term: "소서" },
-    "2026-07-15": { term: "초복" },
-    "2026-07-23": { term: "대서" },
-    "2026-07-25": { term: "중복" },
-    "2026-08-07": { term: "입추" },
-    "2026-08-14": { term: "말복" },
+    "2026-05-24": { holiday: "부처님오신날" }, "2026-05-25": { holiday: "대체공휴일" },
+    "2026-06-06": { holiday: "현충일" },
     "2026-08-15": { holiday: "광복절" },
-    "2026-08-23": { term: "처서" },
-    "2026-09-07": { term: "백로" },
-    "2026-09-23": { term: "추분" },
-    "2026-09-24": { holiday: "추석 연휴" },
-    "2026-09-25": { holiday: "추석" },
-    "2026-09-26": { holiday: "추석 연휴" },
-    "2026-10-03": { holiday: "개천절" },
-    "2026-10-08": { term: "한로" },
-    "2026-10-09": { holiday: "한글날" },
-    "2026-10-23": { term: "상강" },
-    "2026-11-07": { term: "입동" },
-    "2026-11-22": { term: "소설" },
-    "2026-12-07": { term: "대설" },
-    "2026-12-22": { term: "동지" },
-    "2026-12-25": { holiday: "성탄절" }
+    "2026-09-24": { holiday: "추석 연휴" }, "2026-09-25": { holiday: "추석" }, "2026-09-26": { holiday: "추석 연휴" },
+    "2026-10-03": { holiday: "개천절" }, "2026-10-09": { holiday: "한글날" },
+    "2026-12-25": { holiday: "성탄절" },
+
+    // 2027년
+    "2027-01-01": { holiday: "신정" },
+    "2027-02-06": { holiday: "설날 연휴" }, "2027-02-07": { holiday: "설날" }, "2027-02-08": { holiday: "설날 연휴" }, "2027-02-09": { holiday: "대체공휴일" },
+    "2027-03-01": { holiday: "삼일절" },
+    "2027-05-05": { holiday: "어린이날" }, "2027-05-13": { holiday: "부처님오신날" },
+    "2027-06-06": { holiday: "현충일" }, "2027-06-07": { holiday: "대체공휴일" },
+    "2027-08-15": { holiday: "광복절" }, "2027-08-16": { holiday: "대체공휴일" },
+    "2027-09-14": { holiday: "추석 연휴" }, "2027-09-15": { holiday: "추석" }, "2027-09-16": { holiday: "추석 연휴" },
+    "2027-10-03": { holiday: "개천절" }, "2027-10-04": { holiday: "대체공휴일" }, "2027-10-09": { holiday: "한글날" },
+    "2027-12-25": { holiday: "성탄절" }
   };
+
+  // 정확한 음력 계산 함수 (Intl 사용)
+  function getExactLunarDate(dateObj) {
+    try {
+      const formatter = new Intl.DateTimeFormat('ko-KR-u-ca-chinese', {
+        month: 'numeric',
+        day: 'numeric'
+      });
+      const parts = formatter.formatToParts(dateObj);
+      let month = '', day = '';
+      for (const part of parts) {
+        if (part.type === 'month') month = part.value.replace('월', '').trim();
+        if (part.type === 'day') day = part.value.replace('일', '').trim();
+      }
+      return `${month}.${day}`;
+    } catch (e) {
+      return '';
+    }
+  }
 
   function handleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -209,9 +209,9 @@
 
       cell.className = dayClass;
 
-      const approxLunarDay = ((date + 19) % 30) + 1;
-      const approxLunarMonth = date < 12 ? 8 : 9;
-      const lunarStr = `(${approxLunarMonth}.${approxLunarDay})`;
+      // 정확한 음력 계산 적용
+      const targetDate = new Date(year, month, date);
+      const lunarStr = `(${getExactLunarDate(targetDate)})`;
 
       let extraHtml = "";
       if (info.holiday) extraHtml += `<div class="holiday-tag">🔴 ${info.holiday}</div>`;
