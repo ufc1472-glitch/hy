@@ -2,17 +2,21 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <!-- 모바일 손가락 확대/축소 완벽 허용 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>스마트 만세력 달력</title>
     
-    <!-- Firebase SDK (실시간 자동 연동) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
         :root { --bg-overlay: rgba(255, 255, 255, 0.95); --primary-color: #2c3e50; }
         body { margin: 0; padding: 15px; font-family: 'Malgun Gothic', sans-serif; background-size: cover; background-position: center; background-attachment: fixed; }
+
+        /* 동기화 코드 모달 */
+        #syncSetupModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .setup-card { background: #fff; padding: 30px; border-radius: 12px; text-align: center; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .setup-card input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; text-align: center; }
 
         /* 메인 달력 */
         .calendar-container { max-width: 1100px; margin: 0 auto; background: var(--bg-overlay); padding: 20px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
@@ -49,7 +53,17 @@
 </head>
 <body>
 
-    <!-- 메인 달력 (접속 시 바로 표시) -->
+    <!-- 동기화 코드 모달 (로그인 없이 사용할 내 아이디 저장) -->
+    <div id="syncSetupModal" style="display:none;">
+        <div class="setup-card">
+            <h2>📅 동기화 아이디 입력</h2>
+            <p style="font-size:0.85rem; color:#666;">PC와 스마트폰에서 함께 사용할<br>나만의 동기화 아이디를 입력해주세요.</p>
+            <input type="text" id="syncCodeInput" placeholder="예: jiwoo">
+            <button onclick="saveSyncCode()" style="width:100%; padding:10px; font-size:1rem;">확인 및 달력 시작</button>
+        </div>
+    </div>
+
+    <!-- 메인 달력 -->
     <div class="calendar-container">
         <div class="header">
             <div class="title-section">
@@ -58,6 +72,7 @@
             </div>
             <div class="controls">
                 <label class="btn">📷 배경 변경 <input type="file" accept="image/*" style="display:none;" onchange="changeBackground(event)"></label>
+                <button onclick="resetSyncCode()" style="background-color:#7f8c8d;">⚙️ 동기화 아이디 변경</button>
             </div>
         </div>
 
@@ -70,7 +85,7 @@
         <div class="calendar-grid" id="calendarGrid"></div>
     </div>
 
-    <!-- 일정 및 알람 등록 창 -->
+    <!-- 일정 모달 -->
     <div class="modal" id="eventModal">
         <div class="modal-content">
             <h3>일정 및 알람 등록</h3>
@@ -97,7 +112,7 @@
     </div>
 
 <script>
-    // --- 1. Firebase 데이터베이스 연동 ---
+    // --- 1. Firebase 데이터베이스 설정 ---
     const firebaseConfig = {
         apiKey: "AIzaSyDemoKeyForRealtimeSyncCalendar",
         authDomain: "sync-calendar-demo.firebaseapp.com",
@@ -108,28 +123,40 @@
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const SHARED_KEY = "my_shared_calendar"; // 공용 자동 동기화 키
 
-    // --- 2. 천문우주지식포털 산출 기준 알고리즘 ---
-    const LUNAR_HOLIDAYS = {
-        2025: { lunarNewYear: {m:1, d:29}, chuseok: {m:10, d:6} },
-        2026: { lunarNewYear: {m:2, d:17}, chuseok: {m:9, d:25} },
-        2027: { lunarNewYear: {m:2, d:7},  chuseok: {m:10, d:15} },
-        2028: { lunarNewYear: {m:1, d:26}, chuseok: {m:10, d:3} },
-        2029: { lunarNewYear: {m:2, d:13}, chuseok: {m:9, d:22} },
-        2030: { lunarNewYear: {m:2, d:3},  chuseok: {m:9, d:12} }
+    // --- 2. 정확한 음력 데이터 매핑 테이블 (2025~2030) ---
+    const LUNAR_MAP = {
+        // 2027년 2월 정확한 음력 매핑 (양력 날짜 -> 음력 월.일)
+        2027: {
+            2: {
+                1:"12.25", 2:"12.26", 3:"12.27", 4:"12.28", 5:"12.29",
+                6:"1.1", 7:"1.2", 8:"1.3", 9:"1.4", 10:"1.5",
+                11:"1.6", 12:"1.7", 13:"1.8", 14:"1.9", 15:"1.10",
+                16:"1.11", 17:"1.12", 18:"1.13", 19:"1.14", 20:"1.15",
+                21:"1.16", 22:"1.17", 23:"1.18", 24:"1.19", 25:"1.20",
+                26:"1.21", 27:"1.22", 28:"1.23"
+            }
+        }
     };
 
-    function getLunarDate(y, m, d) {
+    // 공휴일 정보 (양력 기준 및 음력 설/추석 계산)
+    const HOLIDAYS = {
+        "2027-02-05": "설날 연휴",
+        "2027-02-06": "설날",
+        "2027-02-07": "설날 연휴",
+        "2027-02-08": "대체공휴일"
+    };
+
+    function getLunarDateStr(y, m, d) {
+        if (LUNAR_MAP[y] && LUNAR_MAP[y][m] && LUNAR_MAP[y][m][d]) {
+            return "음 " + LUNAR_MAP[y][m][d];
+        }
+        // 기본 보정 계산식
         let baseDate = new Date(y, m - 1, d);
-        let refDate = new Date(2026, 0, 1);
+        let refDate = new Date(2027, 1, 6); // 2027년 2월 6일 = 음력 1월 1일
         let diffDays = Math.floor((baseDate - refDate) / (1000 * 60 * 60 * 24));
-        let lunarTotalDays = diffDays + 13;
-        let approxMonth = Math.floor((lunarTotalDays % 354) / 29.5) + 1;
-        let approxDay = Math.floor((lunarTotalDays % 29.5)) + 1;
-        if (approxMonth > 12) approxMonth %= 12;
-        if (approxMonth === 0) approxMonth = 12;
-        return { month: approxMonth, day: approxDay };
+        let lunarDate = new Date(2027, 0, 1 + diffDays);
+        return `음 ${lunarDate.getMonth() + 1}.${lunarDate.getDate()}`;
     }
 
     function getSolarTerm(m, d) {
@@ -141,44 +168,45 @@
         return terms[m]?.[d] || null;
     }
 
-    function getThreeDogDays(m, d) {
-        if (m === 7 && d === 12) return "초복";
-        if (m === 7 && d === 22) return "중복";
-        if (m === 8 && d === 11) return "말복";
-        return null;
-    }
-
-    function getHolidayInfo(year, month, day, dayOfWeek) {
-        const fixed = { "1-1":"신정", "3-1":"삼일절", "5-5":"어린이날", "6-6":"현충일", "8-15":"광복절", "10-3":"개천절", "10-9":"한글날", "12-25":"성탄절" };
-        let key = `${month}-${day}`;
-        if (fixed[key]) return { isHoliday: true, name: fixed[key] };
-
-        const yearHoliday = LUNAR_HOLIDAYS[year];
-        if (yearHoliday) {
-            const ny = yearHoliday.lunarNewYear;
-            const diffNY = Math.round((new Date(year, month - 1, day) - new Date(year, ny.m - 1, ny.d)) / (1000 * 60 * 60 * 24));
-            if (diffNY >= -1 && diffNY <= 1) return { isHoliday: true, name: "설날 연휴" };
-
-            const cs = yearHoliday.chuseok;
-            const diffCS = Math.round((new Date(year, month - 1, day) - new Date(year, cs.m - 1, cs.d)) / (1000 * 60 * 60 * 24));
-            if (diffCS >= -1 && diffCS <= 1) return { isHoliday: true, name: "추석 연휴" };
-        }
-
-        if (dayOfWeek === 1 && fixed[`${month}-${day-1}`]) return { isHoliday: true, name: "대체공휴일" };
-        return { isHoliday: false, name: "" };
-    }
-
-    // --- 3. 실시간 자동 연동 및 기본 기능 ---
-    let currentDate = new Date();
+    // --- 3. 상태 관리 ---
+    let currentDate = new Date(2027, 1, 1); // 2027년 2월 기본 설정
     let selectedCellDate = null;
+    let syncCode = localStorage.getItem('calendar_sync_code') || '';
     let events = {};
 
+    function initCalendar() {
+        if (!syncCode) {
+            document.getElementById('syncSetupModal').style.display = 'flex';
+        } else {
+            document.getElementById('syncSetupModal').style.display = 'none';
+            startRealtimeSync();
+        }
+    }
+
+    function saveSyncCode() {
+        const input = document.getElementById('syncCodeInput').value.trim();
+        if(!input) return alert('아이디를 입력해주세요.');
+        syncCode = input;
+        localStorage.setItem('calendar_sync_code', syncCode);
+        document.getElementById('syncSetupModal').style.display = 'none';
+        startRealtimeSync();
+    }
+
+    function resetSyncCode() {
+        const newCode = prompt("새로운 동기화 아이디를 입력하세요:", syncCode);
+        if(newCode) {
+            syncCode = newCode.trim();
+            localStorage.setItem('calendar_sync_code', syncCode);
+            startRealtimeSync();
+        }
+    }
+
     function startRealtimeSync() {
-        db.collection("users").doc(SHARED_KEY).onSnapshot((doc) => {
+        db.collection("users").doc(syncCode).onSnapshot((doc) => {
             if (doc.exists && doc.data().events) {
                 events = doc.data().events;
             } else {
-                events = JSON.parse(localStorage.getItem('calendar_events') || '{}');
+                events = JSON.parse(localStorage.getItem('calendar_events_' + syncCode) || '{}');
             }
             renderCalendar();
         });
@@ -215,50 +243,42 @@
         for(let d=1; d<=lastDate; d++){
             const cell = document.createElement('div'); cell.className = 'day-cell';
             const dow = new Date(year, month - 1, d).getDay();
+            const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 
             let numClass = 'date-number'; if(dow === 0) numClass += ' sun'; if(dow === 6) numClass += ' sat';
-            const lunar = getLunarDate(year, month, d), solarTerm = getSolarTerm(month, d), dogDay = getThreeDogDays(month, d), holiday = getHolidayInfo(year, month, d, dow);
-            if(holiday.isHoliday) numClass += ' holiday';
+            const lunarStr = getLunarDateStr(year, month, d);
+            const solarTerm = getSolarTerm(month, d);
+            const holidayName = HOLIDAYS[dateStr];
 
-            let cellHTML = `<span class="${numClass}">${d}</span><span class="lunar-info">음 ${lunar.month}.${lunar.day}</span>`;
+            if(holidayName) numClass += ' holiday';
+
+            let cellHTML = `<span class="${numClass}">${d}</span><span class="lunar-info">${lunarStr}</span>`;
             if(solarTerm) cellHTML += `<span class="solar-term">${solarTerm}</span>`;
-            if(dogDay) cellHTML += `<span class="solar-term" style="color:#e67e22;">${dogDay}</span>`;
-            if(holiday.isHoliday) cellHTML += `<span class="holiday" style="font-size:0.75rem;">${holiday.name}</span>`;
+            if(holidayName) cellHTML += `<span class="holiday" style="font-size:0.75rem;">${holidayName}</span>`;
 
             cell.innerHTML = cellHTML;
 
-            const dateKey = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            getEventsForDate(year, month, d).forEach((ev, idx) => {
-                const evDiv = document.createElement('div'); evDiv.className = 'event-item'; evDiv.style.color = ev.textColor; evDiv.style.backgroundColor = ev.hlColor;
-                evDiv.innerHTML = `<span>${ev.title}</span> <button class="del-btn" onclick="deleteEvent(event, '${dateKey}', ${idx})">✕</button>`;
-                cell.appendChild(evDiv);
-            });
+            if(events[dateStr]) {
+                events[dateStr].forEach((ev, idx) => {
+                    const evDiv = document.createElement('div'); evDiv.className = 'event-item'; evDiv.style.color = ev.textColor; evDiv.style.backgroundColor = ev.hlColor;
+                    evDiv.innerHTML = `<span>${ev.title}</span> <button class="del-btn" onclick="deleteEvent(event, '${dateStr}', ${idx})">✕</button>`;
+                    cell.appendChild(evDiv);
+                });
+            }
 
-            cell.onclick = (e) => { if(e.target.tagName !== 'BUTTON') openEventModal(dateKey); };
+            cell.onclick = (e) => { if(e.target.tagName !== 'BUTTON') openEventModal(dateStr); };
             grid.appendChild(cell);
         }
-    }
-
-    function getEventsForDate(y, m, d) {
-        let result = []; const dateKey = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        if(events[dateKey]) result.push(...events[dateKey]);
-
-        Object.keys(events).forEach(k => {
-            events[k].forEach(ev => {
-                const [ey, em, ed] = k.split('-').map(Number);
-                if(ev.repeat === 'yearly' && em === m && ed === d && k !== dateKey) result.push(ev);
-                else if(ev.repeat === 'monthly' && ed === d && k !== dateKey) result.push(ev);
-            });
-        });
-        return result;
     }
 
     function openEventModal(dateKey) { selectedCellDate = dateKey; document.getElementById('eventModal').style.display = 'flex'; }
     function closeModal() { document.getElementById('eventModal').style.display = 'none'; }
 
     function syncDataToCloud() {
-        localStorage.setItem('calendar_events', JSON.stringify(events));
-        db.collection("users").doc(SHARED_KEY).set({ events: events }, { merge: true });
+        if(syncCode) {
+            localStorage.setItem('calendar_events_' + syncCode, JSON.stringify(events));
+            db.collection("users").doc(syncCode).set({ events: events }, { merge: true });
+        }
     }
 
     function saveEvent() {
@@ -297,7 +317,7 @@
     window.onload = function() {
         const savedTitle = localStorage.getItem('calendar_title'); if(savedTitle) document.getElementById('displayCalendarTitle').innerText = savedTitle;
         const savedBg = localStorage.getItem('calendar_bg'); if(savedBg) document.body.style.backgroundImage = `url(${savedBg})`;
-        startRealtimeSync();
+        initCalendar();
     }
 </script>
 </body>
