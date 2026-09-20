@@ -12,45 +12,45 @@
 
   <style>
     * { box-sizing: border-box; font-family: 'Malgun Gothic', -apple-system, sans-serif; }
-    body { background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; }
-    .calendar-container { background: #ffffff; width: 100%; max-width: 800px; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    body { background-color: #f4f6f9; margin: 0; padding: 10px; display: flex; justify-content: center; }
+    .calendar-container { background: #ffffff; width: 100%; max-width: 800px; padding: 15px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     
-    .header-status { background: #edf2f7; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .status-text { font-size: 13px; font-weight: bold; color: #4a5568; }
-    .btn-login { background: #3182ce; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .btn-logout { background: #e53e3e; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; display: none; }
+    .header-status { background: #edf2f7; padding: 10px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .status-text { font-size: 12px; font-weight: bold; color: #4a5568; word-break: break-all; }
+    .btn-login { background: #3182ce; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+    .btn-logout { background: #e53e3e; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; display: none; white-space: nowrap; }
 
-    .title-area { text-align: center; margin-bottom: 15px; }
-    .title-area h2 { margin: 0; font-size: 24px; color: #1a202c; font-weight: bold; }
+    .title-area { text-align: center; margin-bottom: 10px; }
+    .title-area h2 { margin: 0; font-size: 22px; color: #1a202c; font-weight: bold; }
 
     .nav-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .nav-btn { background: #edf2f7; border: 1px solid #cbd5e0; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .current-month { font-size: 20px; font-weight: bold; color: #2d3748; }
+    .nav-btn { background: #edf2f7; border: 1px solid #cbd5e0; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .current-month { font-size: 18px; font-weight: bold; color: #2d3748; }
 
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
-    .day-header { font-weight: bold; padding: 8px 0; font-size: 14px; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+    .day-header { font-weight: bold; padding: 6px 0; font-size: 13px; }
     .day-header.sun { color: #e53e3e; }
     .day-header.sat { color: #3182ce; }
     
-    .date-cell { min-height: 90px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px; background: white; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-start; text-align: left; }
+    .date-cell { min-height: 80px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px; background: white; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-start; text-align: left; overflow: hidden; }
     .date-cell:hover { background: #ebf8ff; }
 
-    .date-header-row { display: flex; align-items: baseline; justify-content: flex-start; gap: 4px; }
-    .date-num { font-size: 15px; font-weight: bold; }
+    .date-header-row { display: flex; align-items: baseline; justify-content: flex-start; gap: 3px; }
+    .date-num { font-size: 14px; font-weight: bold; }
     .sun .date-num, .holiday .date-num { color: #e53e3e; }
     .sat .date-num { color: #3182ce; }
-    .lunar-text { font-size: 11px; color: #718096; }
+    .lunar-text { font-size: 10px; color: #718096; }
 
-    .solar-term { font-size: 10px; color: #2f855a; background: #c6f6d5; padding: 1px 3px; border-radius: 3px; margin-top: 2px; width: fit-content; }
-    .holiday-tag { font-size: 10px; color: #9b2c2c; background: #fed7d7; padding: 1px 3px; border-radius: 3px; margin-top: 2px; width: fit-content; font-weight: bold; }
-    .event-item { background: #ccfbf1; color: #0f766e; font-size: 11px; padding: 2px 4px; border-radius: 4px; margin-top: 2px; text-align: left; font-weight: bold; }
+    .solar-term { font-size: 9px; color: #2f855a; background: #c6f6d5; padding: 1px 2px; border-radius: 3px; margin-top: 2px; width: fit-content; white-space: nowrap; }
+    .holiday-tag { font-size: 9px; color: #9b2c2c; background: #fed7d7; padding: 1px 2px; border-radius: 3px; margin-top: 2px; width: fit-content; font-weight: bold; white-space: nowrap; }
+    .event-item { background: #ccfbf1; color: #0f766e; font-size: 10px; padding: 1px 3px; border-radius: 3px; margin-top: 2px; text-align: left; font-weight: bold; word-break: break-all; }
   </style>
 </head>
 <body>
 
 <div class="calendar-container">
   <div class="header-status">
-    <span id="status-text" class="status-text">🔒 동기화 미연결 (구글 로그인 시 폰과 실시간 연동)</span>
+    <span id="status-text" class="status-text">🔒 동기화 미연결 (구글 로그인 시 실시간 연동)</span>
     <button id="btn-login" class="btn-login" onclick="handleLogin()">구글 계정 로그인</button>
     <button id="btn-logout" class="btn-logout" onclick="handleLogout()">로그아웃</button>
   </div>
@@ -61,7 +61,7 @@
 
   <div class="nav-area">
     <button class="nav-btn" onclick="changeMonth(-1)">◀ 이전달</button>
-    <span id="month-title" class="current-month">2026년 10월</span>
+    <span id="month-title" class="current-month">2026년 9월</span>
     <button class="nav-btn" onclick="changeMonth(1)">다음달 ▶</button>
   </div>
 
@@ -78,7 +78,6 @@
 </div>
 
 <script>
-  // Firebase 설정
   const firebaseConfig = {
     apiKey: "AIzaSyDTOKW3Y3pEFikEMBQllyn46wP3_XInJhM",
     authDomain: "my-calendar-2b531.firebaseapp.com",
@@ -94,11 +93,10 @@
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  let currentDate = new Date(2026, 9, 1);
+  let currentDate = new Date(2026, 8, 1);
   let currentUser = null;
   let userEvents = {};
 
-  // 24절기 및 주요 공휴일 데이터
   const fixedInfo = {
     "2026-01-01": { holiday: "신정" },
     "2026-01-05": { term: "소한" },
@@ -167,7 +165,7 @@
       btnLogout.style.display = "inline-block";
       loadUserEvents();
     } else {
-      statusText.innerText = "🔒 동기화 미연결 (구글 로그인 시 실시간 연동)";
+      statusText.innerText = "🔒 동기화 미연결";
       btnLogin.style.display = "inline-block";
       btnLogout.style.display = "none";
       userEvents = {};
@@ -211,7 +209,6 @@
 
       cell.className = dayClass;
 
-      // 음력 자동 연산 계산식
       const approxLunarDay = ((date + 19) % 30) + 1;
       const approxLunarMonth = date < 12 ? 8 : 9;
       const lunarStr = `(${approxLunarMonth}.${approxLunarDay})`;
