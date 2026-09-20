@@ -2,7 +2,6 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <!-- 스마트폰 자유 확대/축소(핀치 줌) 허용 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>PRO 스마트 달력</title>
 
@@ -80,7 +79,6 @@
     .nav-btn { background: #3182ce; color: white; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
     .current-month { font-size: 18px; font-weight: bold; color: #2d3748; }
 
-    /* 7열 그리드 - 스마트폰 맞춤 */
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; width: 100%; text-align: center; }
     .day-header { font-weight: bold; padding: 6px 0; font-size: 13px; background: rgba(237, 242, 247, 0.9); border-radius: 4px; }
     .day-header.sun { color: #e53e3e; }
@@ -122,7 +120,6 @@
       word-break: break-all;
     }
 
-    /* 형광펜 및 글자색 */
     .hl-none { background: #edf2f7; }
     .hl-yellow { background: #fef08a; }
     .hl-mint { background: #ccfbf1; }
@@ -135,7 +132,6 @@
     .fc-blue { color: #2b6cb0; }
     .fc-green { color: #2f855a; }
 
-    /* 모달 */
     .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
     .modal-content { background: white; padding: 16px; border-radius: 10px; width: 92%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
     .modal-content h3 { margin-top: 0; font-size: 16px; color: #2d3748; }
@@ -176,7 +172,7 @@
 
   <div class="nav-area">
     <button class="nav-btn" onclick="changeMonth(-1)">◀ 이전달</button>
-    <span id="month-title" class="current-month">2027년 2월</span>
+    <span id="month-title" class="current-month"></span>
     <button class="nav-btn" onclick="changeMonth(1)">다음달 ▶</button>
   </div>
 
@@ -254,7 +250,7 @@
         </select>
       </div>
       <div class="form-group">
-        <label>알림 시간 (오전/오후)</label>
+        <label>알림 시간</label>
         <input type="time" id="inputAlertTime" value="09:00">
       </div>
     </div>
@@ -288,11 +284,9 @@
   let userEvents = {};
   let calendarTitle = "PRO 스마트 달력";
 
-  // 배경 이미지 불러오기
   const savedBg = localStorage.getItem("smart_calendar_bg");
   if (savedBg) document.body.style.backgroundImage = `url('${savedBg}')`;
 
-  // 구글 로그인 / 로그아웃
   function handleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch(error => { alert("로그인 오류: " + error.message); });
@@ -352,7 +346,6 @@
     alert("배경 사진이 삭제되었습니다.");
   }
 
-  // 표준 음력 계산
   function getExactLunarDate(year, month, day) {
     try {
       const dateObj = new Date(year, month - 1, day);
@@ -367,22 +360,32 @@
     } catch (e) { return ''; }
   }
 
-  // 천문우주지식포털 24절기
+  // 24절기 (2026 ~ 2028년 국립천문연구원 데이터)
   const solarTerms = {
+    // 2026년
     "2026-02-04":"입춘","2026-02-19":"우수","2026-03-05":"경칩","2026-03-20":"춘분","2026-04-05":"청명","2026-04-20":"곡우",
     "2026-05-05":"입하","2026-05-21":"소만","2026-06-06":"망종","2026-06-21":"하지","2026-07-07":"소서","2026-07-23":"대서",
     "2026-08-07":"입추","2026-08-23":"처서","2026-09-07":"백로","2026-09-23":"추분","2026-10-08":"한로","2026-10-23":"상강",
     "2026-11-07":"입동","2026-11-22":"소설","2026-12-07":"대설","2026-12-22":"동지","2027-01-05":"소한","2027-01-20":"대한",
+
+    // 2027년
     "2027-02-04":"입춘","2027-02-19":"우수","2027-03-06":"경칩","2027-03-21":"춘분","2027-04-05":"청명","2027-04-20":"곡우",
     "2027-05-06":"입하","2027-05-21":"소만","2027-06-06":"망종","2027-06-21":"하지","2027-07-07":"소서","2027-07-23":"대서",
     "2027-08-08":"입추","2027-08-23":"처서","2027-09-08":"백로","2027-09-23":"추분","2027-10-08":"한로","2027-10-24":"상강",
-    "2027-11-07":"입동","2027-11-22":"소설","2027-12-07":"대설","2027-12-22":"동지"
+    "2027-11-07":"입동","2027-11-22":"소설","2027-12-07":"대설","2027-12-22":"동지","2028-01-05":"소한","2028-01-20":"대한",
+
+    // 2028년
+    "2028-02-04":"입춘","2028-02-19":"우수","2028-03-05":"경칩","2028-03-20":"춘분","2028-04-04":"청명","2028-04-19":"곡우",
+    "2028-05-05":"입하","2028-05-20":"소만","2028-06-05":"망종","2028-06-21":"하지","2028-07-06":"소서","2028-07-22":"대서",
+    "2028-08-07":"입추","2028-08-22":"처서","2028-09-07":"백로","2028-09-22":"추분","2028-10-07":"한로","2028-10-23":"상강",
+    "2028-11-07":"입동","2028-11-22":"소설","2028-12-06":"대설","2028-12-21":"동지","2029-01-05":"소한","2029-01-20":"대한"
   };
 
-  // 삼복 (초복, 중복, 말복)
+  // 삼복 (2026 ~ 2028년)
   const bokDays = {
     "2026-07-15":"초복","2026-07-25":"중복","2026-08-14":"말복",
-    "2027-07-16":"초복","2027-07-26":"중복","2027-08-15":"말복"
+    "2027-07-16":"초복","2027-07-26":"중복","2027-08-15":"말복",
+    "2028-07-14":"초복","2028-07-24":"중복","2028-08-13":"말복"
   };
 
   const fixedHolidays = {
