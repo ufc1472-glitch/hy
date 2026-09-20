@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>PRO 스마트 달력</title>
   
   <!-- Firebase SDK -->
@@ -12,47 +12,77 @@
 
   <style>
     * { box-sizing: border-box; font-family: 'Malgun Gothic', -apple-system, sans-serif; }
-    body { background-color: #f4f6f9; margin: 0; padding: 10px; display: flex; justify-content: center; }
-    .calendar-container { background: #ffffff; width: 100%; max-width: 800px; padding: 15px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    body { background-color: #f4f6f9; margin: 0; padding: 5px; display: flex; justify-content: center; }
     
-    .header-status { background: #edf2f7; padding: 10px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .status-text { font-size: 12px; font-weight: bold; color: #4a5568; word-break: break-all; }
-    .btn-login { background: #3182ce; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; white-space: nowrap; }
-    .btn-logout { background: #e53e3e; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; display: none; white-space: nowrap; }
+    /* 모바일 맞춤 전체 컨테이너 */
+    .calendar-container { 
+      background: #ffffff; 
+      width: 100%; 
+      max-width: 800px; 
+      padding: 10px; 
+      border-radius: 12px; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+    }
+    
+    .header-status { background: #edf2f7; padding: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .status-text { font-size: 11px; font-weight: bold; color: #4a5568; word-break: break-all; }
+    .btn-login { background: #3182ce; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+    .btn-logout { background: #e53e3e; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; display: none; white-space: nowrap; }
 
-    .title-area { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
-    .title-area h2 { margin: 0; font-size: 22px; color: #1a202c; font-weight: bold; }
-    .btn-edit-title { background: #e2e8f0; border: 1px solid #cbd5e0; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; color: #2d3748; }
+    .title-area { display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 10px; }
+    .title-area h2 { margin: 0; font-size: 18px; color: #1a202c; font-weight: bold; }
+    .btn-edit-title { background: #e2e8f0; border: 1px solid #cbd5e0; padding: 3px 6px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; color: #2d3748; }
 
-    .nav-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .nav-btn { background: #edf2f7; border: 1px solid #cbd5e0; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .current-month { font-size: 18px; font-weight: bold; color: #2d3748; }
+    .nav-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .nav-btn { background: #edf2f7; border: 1px solid #cbd5e0; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; }
+    .current-month { font-size: 16px; font-weight: bold; color: #2d3748; }
 
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
-    .day-header { font-weight: bold; padding: 6px 0; font-size: 13px; }
+    /* 7열 그리드 스마트폰 화면 자동 축소 */
+    .calendar-grid { 
+      display: grid; 
+      grid-template-columns: repeat(7, 1fr); 
+      gap: 1px; 
+      text-align: center; 
+      width: 100%;
+    }
+    
+    .day-header { font-weight: bold; padding: 4px 0; font-size: 12px; }
     .day-header.sun { color: #e53e3e; }
     .day-header.sat { color: #3182ce; }
     
-    .date-cell { min-height: 95px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px; background: white; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-start; text-align: left; overflow: hidden; }
+    /* 셀 간격 및 높이 스마트폰 최적화 */
+    .date-cell { 
+      min-height: 75px; 
+      border: 1px solid #e2e8f0; 
+      border-radius: 4px; 
+      padding: 2px; 
+      background: white; 
+      cursor: pointer; 
+      display: flex; 
+      flex-direction: column; 
+      justify-content: flex-start; 
+      text-align: left; 
+      overflow: hidden; 
+    }
     .date-cell:hover { background: #ebf8ff; }
 
-    .date-header-row { display: flex; align-items: baseline; justify-content: flex-start; gap: 3px; }
-    .date-num { font-size: 14px; font-weight: bold; }
+    .date-header-row { display: flex; align-items: baseline; justify-content: flex-start; gap: 2px; flex-wrap: wrap; }
+    .date-num { font-size: 13px; font-weight: bold; }
     .sun .date-num, .holiday .date-num { color: #e53e3e; }
     .sat .date-num { color: #3182ce; }
-    .lunar-text { font-size: 10px; color: #718096; }
+    .lunar-text { font-size: 9px; color: #718096; }
 
-    .solar-term { font-size: 9px; color: #2f855a; background: #c6f6d5; padding: 1px 3px; border-radius: 3px; margin-top: 2px; width: fit-content; white-space: nowrap; }
-    .holiday-tag { font-size: 9px; color: #9b2c2c; background: #fed7d7; padding: 1px 3px; border-radius: 3px; margin-top: 2px; width: fit-content; font-weight: bold; white-space: nowrap; }
+    .solar-term { font-size: 8px; color: #2f855a; background: #c6f6d5; padding: 1px 2px; border-radius: 2px; margin-top: 1px; width: fit-content; white-space: nowrap; }
+    .holiday-tag { font-size: 8px; color: #9b2c2c; background: #fed7d7; padding: 1px 2px; border-radius: 2px; margin-top: 1px; width: fit-content; font-weight: bold; white-space: nowrap; }
     
     .event-item { 
-      font-size: 11px; 
-      padding: 2px 4px; 
-      border-radius: 4px; 
-      margin-top: 2px; 
+      font-size: 10px; 
+      padding: 1px 3px; 
+      border-radius: 3px; 
+      margin-top: 1px; 
       text-align: left; 
       font-weight: bold; 
-      line-height: 1.2;
+      line-height: 1.1;
       word-break: break-all;
     }
 
@@ -64,24 +94,24 @@
     .hl-orange { background: #fed7aa; color: #9a3412; }
 
     .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-    .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; }
-    .modal-content h3 { margin-top: 0; color: #2d3748; }
-    .form-group { margin-bottom: 12px; text-align: left; }
-    .form-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #4a5568; }
-    .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; }
+    .modal-content { background: white; padding: 15px; border-radius: 10px; width: 92%; max-width: 380px; }
+    .modal-content h3 { margin-top: 0; font-size: 15px; color: #2d3748; }
+    .form-group { margin-bottom: 10px; text-align: left; }
+    .form-group label { display: block; font-size: 11px; font-weight: bold; margin-bottom: 3px; color: #4a5568; }
+    .form-group input, .form-group select { width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 5px; font-size: 13px; }
 
-    .modal-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; }
-    .btn-save { background: #3182ce; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-    .btn-delete { background: #e53e3e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-    .btn-cancel { background: #a0aec0; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .modal-buttons { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }
+    .btn-save { background: #3182ce; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; }
+    .btn-delete { background: #e53e3e; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; }
+    .btn-cancel { background: #a0aec0; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; }
   </style>
 </head>
 <body>
 
 <div class="calendar-container">
   <div class="header-status">
-    <span id="status-text" class="status-text">🔒 동기화 미연결 (구글 로그인 시 실시간 연동)</span>
-    <button id="btn-login" class="btn-login" onclick="handleLogin()">구글 계정 로그인</button>
+    <span id="status-text" class="status-text">🔒 동기화 미연결</span>
+    <button id="btn-login" class="btn-login" onclick="handleLogin()">구글 로그인</button>
     <button id="btn-logout" class="btn-logout" onclick="handleLogout()">로그아웃</button>
   </div>
 
@@ -113,7 +143,7 @@
     <h3 id="modalDateTitle">일정 및 알림 설정</h3>
     <div class="form-group">
       <label>일정 내용</label>
-      <input type="text" id="inputMemo" placeholder="예: 서부본부 교육, 생일 등">
+      <input type="text" id="inputMemo" placeholder="예: 현장 점검, 생일 등">
     </div>
     <div class="form-group">
       <label>형광펜 (배경 색상)</label>
@@ -130,28 +160,28 @@
       <label>양력 / 음력 선택</label>
       <select id="selectCalendarType">
         <option value="solar">양력 기준</option>
-        <option value="lunar">음력 기준 (생신/제사 등)</option>
+        <option value="lunar">음력 기준 (생신/제사)</option>
       </select>
     </div>
     <div class="form-group">
       <label>반복 설정</label>
       <select id="selectRepeat">
         <option value="none">반복 안함</option>
-        <option value="yearly">매년 반복 (생일, 기념일)</option>
-        <option value="monthly">매월 반복 (정기 모임/교육)</option>
+        <option value="yearly">매년 반복</option>
+        <option value="monthly">매월 반복</option>
       </select>
     </div>
     <div class="form-group">
       <label>알림 시점</label>
       <select id="selectAlertTiming">
         <option value="0">당일 알림</option>
-        <option value="1">1일 전 (전일) 알림</option>
+        <option value="1">1일 전 알림</option>
         <option value="2">2일 전 알림</option>
         <option value="3">3일 전 알림</option>
       </select>
     </div>
     <div class="form-group">
-      <label>알림 시간 설정</label>
+      <label>알림 시간</label>
       <input type="time" id="inputTime">
     </div>
     <div class="modal-buttons">
@@ -179,15 +209,10 @@
   let currentDate = new Date(2027, 10, 1);
   let currentUser = null;
   let selectedDateStr = "";
-  
   let userEvents = {};
   let calendarTitle = "PRO 스마트 달력";
 
-  if ("Notification" in window && Notification.permission !== "granted") {
-    Notification.requestPermission();
-  }
-
-  // 자바스크립트 표준 Intl 엔진 기반 음력 계산 함수
+  // 표준 브라우저 지원 음력 변환
   function getExactLunarDate(year, month, day) {
     try {
       const dateObj = new Date(year, month - 1, day);
@@ -202,47 +227,25 @@
     } catch (e) { return ''; }
   }
 
-  // 공휴일 & 절기 통합 사전
   const holidayDB = {
     "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", 
     "06-06": "현충일", "08-15": "광복절", "10-03": "개천절", 
     "10-09": "한글날", "12-25": "성탄절"
   };
 
-  // 24절기 사전
   const termDB = {
-    "2026-01-05":"소한","2026-01-20":"대한","2026-02-04":"입춘","2026-02-19":"우수","2026-03-06":"경칩","2026-03-21":"춘분",
-    "2026-04-05":"청명","2026-04-20":"곡우","2026-05-05":"입하","2026-05-21":"소만","2026-06-06":"망종","2026-06-21":"하지",
-    "2026-07-07":"소서","2026-07-23":"대서","2026-08-07":"입추","2026-08-23":"처서","2026-09-07":"백로","2026-09-23":"추분",
-    "2026-10-08":"한로","2026-10-23":"상강","2026-11-07":"입동","2026-11-22":"소설","2026-12-07":"대설","2026-12-22":"동지",
-    "2027-01-05":"소한","2027-01-20":"대한","2027-02-04":"입춘","2027-02-19":"우수","2027-03-06":"경칩","2027-03-21":"춘분",
-    "2027-04-05":"청명","2027-04-20":"곡우","2027-05-06":"입하","2027-05-21":"소만","2027-06-06":"망종","2027-06-22":"하지",
-    "2027-07-07":"소서","2027-07-23":"대서","2027-08-08":"입추","2027-08-23":"처서","2027-09-08":"백로","2027-09-23":"추분",
-    "2027-10-08":"한로","2027-10-23":"상강","2027-11-07":"입동","2027-11-22":"소설","2027-12-07":"대설","2027-12-22":"동지",
-    "2028-01-06":"소한","2028-01-21":"대한","2028-02-04":"입춘","2028-02-19":"우수","2028-03-05":"경칩","2028-03-20":"춘분",
-    "2028-04-04":"청명","2028-04-19":"곡우","2028-05-05":"입하","2028-05-20":"소만","2028-06-05":"망종","2028-06-21":"하지",
-    "2028-07-07":"소서","2028-07-22":"대서","2028-08-07":"입추","2028-08-22":"처서","2028-09-07":"백로","2028-09-22":"추분",
-    "2028-10-08":"한로","2028-10-23":"상강","2028-11-07":"입동","2028-11-21":"소설","2028-12-06":"대설","2028-12-21":"동지"
+    "2027-11-07":"입동","2027-11-22":"소설","2027-12-07":"대설","2027-12-22":"동지"
   };
 
   function getHolidayName(year, month, day, lunarMD) {
     const mm = String(month).padStart(2, '0');
     const dd = String(day).padStart(2, '0');
-    const dateStr = `${year}-${mm}-${dd}`;
     const mdStr = `${mm}-${dd}`;
 
     if (holidayDB[mdStr]) return holidayDB[mdStr];
-
-    // 음력 주요 명절 (설날, 추석, 석가탄신일)
     if (lunarMD === "1.1") return "설날";
     if (lunarMD === "8.15") return "추석";
     if (lunarMD === "4.8") return "부처님오신날";
-
-    // 연휴 자동 판단
-    const prevLunar = getExactLunarDate(year, month, day - 1);
-    const nextLunar = getExactLunarDate(year, month, day + 1);
-    if (nextLunar === "1.1" || prevLunar === "1.1") return "설날 연휴";
-    if (nextLunar === "8.15" || prevLunar === "8.15") return "추석 연휴";
 
     return "";
   }
@@ -271,7 +274,7 @@
     const btnLogout = document.getElementById("btn-logout");
 
     if (user) {
-      statusText.innerText = "☁️ 동기화 완료 (" + user.displayName + "님)";
+      statusText.innerText = "☁️ " + user.displayName + "님";
       btnLogin.style.display = "none";
       btnLogout.style.display = "inline-block";
       loadUserData();
@@ -292,25 +295,11 @@
     const mm = String(month).padStart(2, '0');
     const dd = String(day).padStart(2, '0');
     const fullKey = `${year}-${mm}-${dd}`;
-    const monthDayKey = `${mm}-${dd}`;
 
     let eventList = [];
-
     for (let key in userEvents) {
-      const item = typeof userEvents[key] === 'string' ? { memo: userEvents[key], calType: 'solar', repeat: 'none', timing: '0', time: '', color: 'hl-mint' } : userEvents[key];
-      const isLunar = item.calType === 'lunar';
-
-      if (key === fullKey) {
-        eventList.push(item);
-      } else if (item.repeat === 'yearly') {
-        if (isLunar && item.lunarMD && item.lunarMD === lunarMD) {
-          eventList.push(item);
-        } else if (!isLunar && key.substring(5) === monthDayKey) {
-          eventList.push(item);
-        }
-      } else if (item.repeat === 'monthly' && key.substring(8) === dd) {
-        eventList.push(item);
-      }
+      const item = typeof userEvents[key] === 'string' ? { memo: userEvents[key] } : userEvents[key];
+      if (key === fullKey) eventList.push(item);
     }
     return eventList;
   }
@@ -356,9 +345,8 @@
       if (termName) extraHtml += `<div class="solar-term">🥬 ${termName}</div>`;
       
       matchedEvents.forEach(evt => {
-        let typeBadge = evt.calType === 'lunar' ? '(음) ' : '';
         let colorClass = evt.color || 'hl-mint';
-        extraHtml += `<div class="event-item ${colorClass}">${typeBadge}${evt.memo}</div>`;
+        extraHtml += `<div class="event-item ${colorClass}">${evt.memo}</div>`;
       });
 
       cell.innerHTML = `
@@ -369,23 +357,16 @@
         ${extraHtml}
       `;
 
-      cell.onclick = () => openModal(dateStr, year, month + 1, date, lunarMD);
+      cell.onclick = () => openModal(dateStr, lunarMD);
       calendarDays.appendChild(cell);
     }
   }
 
-  function openModal(dateStr, y, m, d, lunarMD) {
+  function openModal(dateStr, lunarMD) {
     selectedDateStr = dateStr;
-    document.getElementById("modalDateTitle").innerText = `${dateStr} (음력 ${lunarMD}) 일정 설정`;
-    
+    document.getElementById("modalDateTitle").innerText = `${dateStr} (음력 ${lunarMD}) 일정`;
     const existing = userEvents[dateStr] || {};
-    document.getElementById("inputMemo").value = existing.memo || (typeof existing === 'string' ? existing : "");
-    document.getElementById("selectColor").value = existing.color || "hl-mint";
-    document.getElementById("selectCalendarType").value = existing.calType || "solar";
-    document.getElementById("selectRepeat").value = existing.repeat || "none";
-    document.getElementById("selectAlertTiming").value = existing.timing || "0";
-    document.getElementById("inputTime").value = existing.time || "";
-
+    document.getElementById("inputMemo").value = existing.memo || "";
     document.getElementById("eventModal").style.display = "flex";
   }
 
@@ -395,34 +376,19 @@
 
   function saveEvent() {
     const memo = document.getElementById("inputMemo").value.trim();
-    const color = document.getElementById("selectColor").value;
-    const calType = document.getElementById("selectCalendarType").value;
-    const repeat = document.getElementById("selectRepeat").value;
-    const timing = document.getElementById("selectAlertTiming").value;
-    const time = document.getElementById("inputTime").value;
-
-    const parts = selectedDateStr.split('-');
-    const lunarMD = getExactLunarDate(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
-
     if (memo === "") {
       delete userEvents[selectedDateStr];
     } else {
-      userEvents[selectedDateStr] = { memo, color, calType, repeat, timing, time, lunarMD, alerted: false };
+      userEvents[selectedDateStr] = { memo, color: document.getElementById("selectColor").value };
     }
-
-    if (currentUser) {
-      db.collection("users").doc(currentUser.uid).set({ events: userEvents }, { merge: true });
-    }
-
+    if (currentUser) db.collection("users").doc(currentUser.uid).set({ events: userEvents }, { merge: true });
     closeModal();
     renderCalendar();
   }
 
   function deleteCurrentEvent() {
     delete userEvents[selectedDateStr];
-    if (currentUser) {
-      db.collection("users").doc(currentUser.uid).set({ events: userEvents }, { merge: true });
-    }
+    if (currentUser) db.collection("users").doc(currentUser.uid).set({ events: userEvents }, { merge: true });
     closeModal();
     renderCalendar();
   }
@@ -430,18 +396,9 @@
   function loadUserData() {
     if (!currentUser) return;
     db.collection("users").doc(currentUser.uid).get().then(doc => {
-      if (doc.exists) {
-        const data = doc.data();
-        if (data.events) {
-          userEvents = Object.assign({}, userEvents, data.events);
-        }
-        if (data.title) {
-          calendarTitle = data.title;
-          document.getElementById("calendar-main-title").innerText = calendarTitle;
-          document.title = calendarTitle;
-        }
+      if (doc.exists && doc.data().events) {
+        userEvents = doc.data().events;
       }
-      db.collection("users").doc(currentUser.uid).set({ events: userEvents }, { merge: true });
       renderCalendar();
     });
   }
