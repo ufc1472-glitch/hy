@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>달력이름 쓰세요</title>
+  <title>나만의 달력</title>
   
-  <!-- Firebase SDK (v10 호환 라이브러리) -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -44,26 +44,29 @@
 <body>
 
 <div class="calendar-container">
-  <!-- 로그인 상태 표시 바 -->
+  <!-- 동기화 로그인 상태 표시 -->
   <div class="header-status">
     <span id="status-text" class="status-text">🔒 동기화 미연결 (로그인 필요)</span>
     <button id="btn-login" class="btn-login" onclick="handleLogin()">구글 계정 로그인</button>
     <button id="btn-logout" class="btn-logout" onclick="handleLogout()">로그아웃</button>
   </div>
 
-  <!-- 타이틀 -->
+  <!-- ======================================================== -->
+  <!-- 👇 [여기서 달력 제목을 수정하세요!]                     -->
+  <!-- ======================================================== -->
   <div class="title-area">
     <h2>지우 할아버지의 달력</h2>
   </div>
+  <!-- ======================================================== -->
 
-  <!-- 달 이동 네비게이션 -->
+  <!-- 달 이동 버튼 -->
   <div class="nav-area">
     <button class="nav-btn" onclick="changeMonth(-1)">◀ 이전달</button>
     <span id="month-title" class="current-month">2026년 9월</span>
     <button class="nav-btn" onclick="changeMonth(1)">다음달 ▶</button>
   </div>
 
-  <!-- 달력 출력 영역 -->
+  <!-- 달력 요일 표시 -->
   <div class="calendar-grid">
     <div class="day-header sun">일</div>
     <div class="day-header">월</div>
@@ -77,7 +80,7 @@
 </div>
 
 <script>
-  // 1. 파이어베이스 설정 정보
+  // Firebase 연동 설정
   const firebaseConfig = {
     apiKey: "AIzaSyDTOKW3Y3pEFikEMBQllyn46wP3_XInJhM",
     authDomain: "my-calendar-2b531.firebaseapp.com",
@@ -87,17 +90,14 @@
     appId: "1:391516744396:web:214d5afeae8474df76b069"
   };
 
-  // 2. 파이어베이스 초기화
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  let currentDate = new Date(2026, 8, 1); // 2026년 9월 기본 설정
+  let currentDate = new Date(2026, 8, 1);
   let currentUser = null;
   let events = {};
-  let unsubscribeEvents = null; // 실시간 리스너 해제용 변수
 
-  // 3. 구글 로그인 처리
   function handleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch(error => {
@@ -105,16 +105,10 @@
     });
   }
 
-  // 4. 로그아웃 처리
   function handleLogout() {
-    if (unsubscribeEvents) {
-      unsubscribeEvents(); // 로그아웃 시 리스너 해제
-      unsubscribeEvents = null;
-    }
     auth.signOut();
   }
 
-  // 5. 인증 상태 감지
   auth.onAuthStateChanged(user => {
     currentUser = user;
     const statusText = document.getElementById("status-text");
@@ -125,7 +119,7 @@
       statusText.innerText = "☁️ 동기화 완료 (" + user.displayName + "님)";
       btnLogin.style.display = "none";
       btnLogout.style.display = "inline-block";
-      subscribeEvents(); // 실시간 구독 시작
+      loadEvents();
     } else {
       statusText.innerText = "🔒 동기화 미연결 (로그인 필요)";
       btnLogin.style.display = "inline-block";
@@ -135,13 +129,12 @@
     }
   });
 
-  // 6. 달력 연도/월 이동
   function changeMonth(diff) {
     currentDate.setMonth(currentDate.getMonth() + diff);
     renderCalendar();
+    if (currentUser) loadEvents();
   }
 
-  // 7. 달력 화면 그리기
   function renderCalendar() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -153,14 +146,12 @@
     const calendarDays = document.getElementById("calendar-days");
     calendarDays.innerHTML = "";
 
-    // 빈 날짜 칸
     for (let i = 0; i < firstDay; i++) {
       const emptyCell = document.createElement("div");
       emptyCell.className = "date-cell";
       calendarDays.appendChild(emptyCell);
     }
 
-    // 일자 생성
     for (let date = 1; date <= lastDate; date++) {
       const cell = document.createElement("div");
       const dayOfWeek = (firstDay + date - 1) % 7;
@@ -184,7 +175,6 @@
     }
   }
 
-  // 8. 일정 추가 및 파이어베이스 저장 (Firestore 반영 시 실시간 리스너가 화면을 자동 갱신합니다)
   function addEvent(dateStr) {
     if (!currentUser) {
       alert("일정을 저장하려면 먼저 구글 로그인을 진행해주세요.");
@@ -193,36 +183,27 @@
     const title = prompt(`${dateStr} 일정을 입력하세요:`, events[dateStr] || "");
     if (title !== null) {
       if (title.trim() === "") {
+        delete events[dateStr];
         db.collection("users").doc(currentUser.uid).collection("events").doc(dateStr).delete();
       } else {
+        events[dateStr] = title;
         db.collection("users").doc(currentUser.uid).collection("events").doc(dateStr).set({ title: title });
       }
+      renderCalendar();
     }
   }
 
-  // 9. 파이어베이스 실시간 데이터 동기화 (onSnapshot)
-  function subscribeEvents() {
+  function loadEvents() {
     if (!currentUser) return;
-
-    // 기존 리스너가 있다면 중복 방지를 위해 먼저 해제
-    if (unsubscribeEvents) {
-      unsubscribeEvents();
-    }
-
-    // Firestore 데이터베이스 변경 감지
-    unsubscribeEvents = db.collection("users").doc(currentUser.uid).collection("events")
-      .onSnapshot(snapshot => {
-        events = {};
-        snapshot.forEach(doc => {
-          events[doc.id] = doc.data().title;
-        });
-        renderCalendar(); // 변경 사항 감지 시 달력 다시 그리기
-      }, error => {
-        console.error("실시간 동기화 오류:", error);
+    db.collection("users").doc(currentUser.uid).collection("events").get().then(snapshot => {
+      events = {};
+      snapshot.forEach(doc => {
+        events[doc.id] = doc.data().title;
       });
+      renderCalendar();
+    });
   }
 
-  // 최초 달력 표시
   renderCalendar();
 </script>
 
