@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PRO 스마트 달력</title>
+  <title>PRO 스마트 일정 달력</title>
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -26,7 +26,7 @@
     }
     .calendar-container {
       width: 100%;
-      max-width: 900px;
+      max-width: 950px;
       background: var(--card-bg);
       border-radius: 16px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.05);
@@ -85,11 +85,13 @@
       border-radius: 10px;
       padding: 6px;
       background: #fff;
-      border: 1px solid #f1f5f9;
+      border: 1px solid #e2e8f0;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      cursor: pointer;
     }
+    .day-cell:hover { background: #f8fafc; }
     .day-number-row {
       display: flex;
       justify-content: space-between;
@@ -107,7 +109,7 @@
     }
     .tag-holiday { background: #fee2e2; color: #dc2626; font-weight: bold; }
     .tag-term { background: #dcfce7; color: #15803d; }
-    .tag-event { background: #e0f2fe; color: #0369a1; }
+    .tag-event { background: #e0f2fe; color: #0369a1; font-weight: 500; }
   </style>
 </head>
 <body>
@@ -130,16 +132,16 @@
 </div>
 
 <script>
-  // Firebase 기본 설정
+  // 선생님의 Firebase 실제 프로젝트 설정
   const firebaseConfig = {
-    apiKey: "AIzaSyDummyKeyForCalendarProject_12345678",
-    authDomain: "calendar-project.firebaseapp.com",
-    projectId: "calendar-project",
-    storageBucket: "calendar-project.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:abcdef123456"
+    authDomain: "calendar-98064.firebaseapp.com",
+    projectId: "calendar-98064",
+    storageBucket: "calendar-98064.firebasestorage.app",
+    messagingSenderId: "1032338665042",
+    appId: "1:1032338665042:web:9455331e84a22ba384d7cd"
   };
-  
+
+  // 중복 초기화 방지 구문
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
   }
@@ -150,7 +152,7 @@
   let currentUser = null;
   let userEvents = {};
 
-  // 24절기 / 복날 / 명절 / 공휴일 자동 표기 데이터
+  // 24절기 / 복날 / 명절 / 공휴일 자동 데이터
   const fixedInfo = {
     "2026-01-01": { holiday: "신정" },
     "2026-01-05": { term: "소한" },
@@ -181,14 +183,19 @@
     "2026-08-15": { holiday: "광복절" },
     "2026-08-23": { term: "처서" },
     "2026-09-07": { term: "백로" },
+    "2026-09-18": { event: "서부본부 교육14:00" },
     "2026-09-23": { term: "추분" },
     "2026-09-24": { holiday: "추석 연휴" },
     "2026-09-25": { holiday: "추석" },
     "2026-09-26": { holiday: "추석 연휴" },
+    "2026-09-29": { event: "경환 생일" },
     "2026-10-03": { holiday: "개천절" },
+    "2026-10-04": { event: "집사람 탄신일" },
     "2026-10-08": { term: "한로" },
     "2026-10-09": { holiday: "한글날" },
+    "2026-10-16": { event: "장모님 생신" },
     "2026-10-23": { term: "상강" },
+    "2026-10-25": { event: "매부생일" },
     "2026-11-07": { term: "입동" },
     "2026-11-22": { term: "소설" },
     "2026-12-07": { term: "대설" },
@@ -234,6 +241,7 @@
       if (info.holiday) cellClass += " holiday";
 
       cell.className = cellClass;
+      cell.onclick = () => addEvent(dateStr);
 
       let html = `
         <div class="day-number-row">
@@ -244,6 +252,7 @@
 
       if (info.holiday) html += `<div class="tag tag-holiday">🔴 ${info.holiday}</div><br>`;
       if (info.term) html += `<div class="tag tag-term">🥬 ${info.term}</div><br>`;
+      if (info.event) html += `<div class="tag tag-event">📌 ${info.event}</div><br>`;
       if (userEvents[dateStr]) html += `<div class="tag tag-event">📅 ${userEvents[dateStr]}</div>`;
 
       html += `</div>`;
@@ -258,6 +267,17 @@
   }
 
   function handleAuth() {
+    if (currentUser) {
+      auth.signOut().then(() => {
+        currentUser = null;
+        userEvents = {};
+        document.getElementById("sync-status").innerText = "🔒 동기화 미연결 (구글 로그인 시 실시간 연동)";
+        document.getElementById("auth-btn").innerText = "구글 계정 로그인";
+        renderCalendar();
+      });
+      return;
+    }
+
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).then((result) => {
       currentUser = result.user;
@@ -265,7 +285,7 @@
       document.getElementById("auth-btn").innerText = "로그아웃";
       loadUserEvents();
     }).catch((err) => {
-      alert("로그인 처리 오류: " + err.message);
+      alert("로그인 중 오류가 발생했습니다: " + err.message);
     });
   }
 
@@ -278,6 +298,33 @@
       }
     });
   }
+
+  function addEvent(dateStr) {
+    if (!currentUser) {
+      alert("일정을 추가하거나 저장하려면 먼저 [구글 계정 로그인]을 눌러주세요.");
+      return;
+    }
+    const memo = prompt(`${dateStr} 일정을 입력하세요:`, userEvents[dateStr] || "");
+    if (memo !== null) {
+      if (memo.trim() === "") {
+        delete userEvents[dateStr];
+      } else {
+        userEvents[dateStr] = memo.trim();
+      }
+      db.collection("users").doc(currentUser.uid).set({ events: userEvents }, { merge: true })
+        .then(() => { renderCalendar(); });
+    }
+  }
+
+  // 자동 로그인 유지 체크
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      currentUser = user;
+      document.getElementById("sync-status").innerText = `🟢 ${currentUser.displayName}님 로그인됨`;
+      document.getElementById("auth-btn").innerText = "로그아웃";
+      loadUserEvents();
+    }
+  });
 
   renderCalendar();
 </script>
