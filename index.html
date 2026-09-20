@@ -82,7 +82,6 @@
     .day-header.sat { color: #3b82f6; }
     .day-cell {
       min-height: 100px;
-      border: 1fr solid #e2e8f0;
       border-radius: 10px;
       padding: 6px;
       background: #fff;
@@ -99,7 +98,6 @@
     .day-num { font-weight: bold; font-size: 16px; }
     .day-cell.sun .day-num, .day-cell.holiday .day-num { color: #ef4444; }
     .day-cell.sat .day-num { color: #3b82f6; }
-    .lunar-text { font-size: 11px; color: #94a3b8; }
     .tag {
       font-size: 11px;
       padding: 2px 6px;
@@ -110,7 +108,6 @@
     .tag-holiday { background: #fee2e2; color: #dc2626; font-weight: bold; }
     .tag-term { background: #dcfce7; color: #15803d; }
     .tag-event { background: #e0f2fe; color: #0369a1; }
-    .events-list { margin-top: 4px; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -129,13 +126,11 @@
     <button class="nav-btn" onclick="changeMonth(1)">다음달 ▶</button>
   </div>
 
-  <div class="grid" id="calendar-grid">
-    <!-- 달력 셀들이 자바스크립트로 생성됩니다 -->
-  </div>
+  <div class="grid" id="calendar-grid"></div>
 </div>
 
 <script>
-  // Firebase 기본 설정 (프로젝트 키)
+  // Firebase 기본 설정
   const firebaseConfig = {
     apiKey: "AIzaSyDummyKeyForCalendarProject_12345678",
     authDomain: "calendar-project.firebaseapp.com",
@@ -151,13 +146,12 @@
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  let currentDate = new Date(2026, 9, 1); // 2026년 10월 기준
+  let currentDate = new Date(2026, 9, 1); // 2026년 10월 기본
   let currentUser = null;
   let userEvents = {};
 
-  // 24절기 & 주요 명절 & 절기/복날 데이터베이스
+  // 24절기 / 복날 / 명절 / 공휴일 자동 표기 데이터
   const fixedInfo = {
-    // 2026년 기준 24절기 / 복날 / 명절 / 공휴일 데이터
     "2026-01-01": { holiday: "신정" },
     "2026-01-05": { term: "소한" },
     "2026-01-20": { term: "대한" },
@@ -210,7 +204,6 @@
     const grid = document.getElementById("calendar-grid");
     grid.innerHTML = "";
 
-    // 요일 헤더
     const days = ["일", "월", "화", "수", "목", "금", "토"];
     days.forEach((day, idx) => {
       const dayHeader = document.createElement("div");
@@ -222,14 +215,12 @@
     const firstDay = new Date(year, month, 1).getDay();
     const lastDate = new Date(year, month + 1, 0).getDate();
 
-    // 빈 날짜
     for (let i = 0; i < firstDay; i++) {
       const emptyCell = document.createElement("div");
       emptyCell.className = "day-cell empty";
       grid.appendChild(emptyCell);
     }
 
-    // 날짜 생성
     for (let date = 1; date <= lastDate; date++) {
       const cell = document.createElement("div");
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
@@ -251,17 +242,9 @@
         <div>
       `;
 
-      if (info.holiday) {
-        html += `<div class="tag tag-holiday">🔴 ${info.holiday}</div><br>`;
-      }
-      if (info.term) {
-        html += `<div class="tag tag-term">🥬 ${info.term}</div><br>`;
-      }
-
-      // 개인 등록 일정
-      if (userEvents[dateStr]) {
-        html += `<div class="tag tag-event">📅 ${userEvents[dateStr]}</div>`;
-      }
+      if (info.holiday) html += `<div class="tag tag-holiday">🔴 ${info.holiday}</div><br>`;
+      if (info.term) html += `<div class="tag tag-term">🥬 ${info.term}</div><br>`;
+      if (userEvents[dateStr]) html += `<div class="tag tag-event">📅 ${userEvents[dateStr]}</div>`;
 
       html += `</div>`;
       cell.innerHTML = html;
@@ -278,11 +261,11 @@
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).then((result) => {
       currentUser = result.user;
-      document.getElementById("sync-status").innerText = `🟢 ${currentUser.displayName}님 로그인됨 (실시간 연동 중)`;
+      document.getElementById("sync-status").innerText = `🟢 ${currentUser.displayName}님 로그인됨`;
       document.getElementById("auth-btn").innerText = "로그아웃";
       loadUserEvents();
     }).catch((err) => {
-      alert("로그인 처리 중 오류 발생: " + err.message);
+      alert("로그인 처리 오류: " + err.message);
     });
   }
 
@@ -296,7 +279,6 @@
     });
   }
 
-  // 초기 실행
   renderCalendar();
 </script>
 </body>
