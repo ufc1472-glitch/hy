@@ -98,12 +98,41 @@
 
   let currentDate = new Date(2026, 8, 1);
   let currentUser = null;
-  let userEvents = {};
+  
+  // 기존에 입력하셨던 중요 일정 데이터 통합 보관
+  let userEvents = {
+    "2026-09-14": "서부본부 교육",
+    "2026-09-18": "서부본부 교육14:00",
+    "2026-09-29": "경환 생일",
+    "2026-10-04": "집사람 탄신일",
+    "2026-10-16": "장모님 생신",
+    "2026-10-25": "매부생일"
+  };
   let calendarTitle = "PRO 스마트 달력";
 
-  // 한국천문연구원 기준 정밀 데이터베이스 (2026~2027)
+  // 브라우저 알림 권한 요청
+  if ("Notification" in window && Notification.permission !== "granted") {
+    Notification.requestPermission();
+  }
+
+  // 오늘 등록된 일정이 있으면 알림 창을 띄워주는 기능
+  function checkTodayAlert() {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${y}-${m}-${d}`;
+
+    if (userEvents[todayStr]) {
+      if (Notification.permission === "granted") {
+        new Notification("📌 오늘 일정 알림", { body: userEvents[todayStr] });
+      } else {
+        alert("📌 오늘 일정 알림: " + userEvents[todayStr]);
+      }
+    }
+  }
+
   const calendarDB = {
-    // 2026년 공휴일 및 24절기/복날
     "2026-01-01": { holiday: "신정" },
     "2026-01-05": { term: "소한" }, "2026-01-20": { term: "대한" },
     "2026-02-04": { term: "입춘" }, "2026-02-16": { holiday: "설날 연휴" }, "2026-02-17": { holiday: "설날" }, "2026-02-18": { holiday: "설날 연휴" }, "2026-02-19": { term: "우수" },
@@ -116,26 +145,10 @@
     "2026-09-07": { term: "백로" }, "2026-09-23": { term: "추분" }, "2026-09-24": { holiday: "추석 연휴" }, "2026-09-25": { holiday: "추석" }, "2026-09-26": { holiday: "추석 연휴" },
     "2026-10-03": { holiday: "개천절" }, "2026-10-08": { term: "한로" }, "2026-10-09": { holiday: "한글날" }, "2026-10-23": { term: "상강" },
     "2026-11-07": { term: "입동" }, "2026-11-22": { term: "소설" },
-    "2026-12-07": { term: "대설" }, "2026-12-22": { term: "동지" }, "2026-12-25": { holiday: "성탄절" },
-
-    // 2027년 공휴일 및 24절기/복날
-    "2027-01-01": { holiday: "신정" }, "2027-01-05": { term: "소한" }, "2027-01-20": { term: "대한" },
-    "2027-02-04": { term: "입춘" }, "2027-02-05": { holiday: "설날 연휴" }, "2027-02-06": { holiday: "설날" }, "2027-02-07": { holiday: "설날 연휴" }, "2027-02-08": { holiday: "대체공휴일" }, "2027-02-19": { term: "우수" },
-    "2027-03-01": { holiday: "삼일절" }, "2027-03-06": { term: "경칩" }, "2027-03-21": { term: "춘분" },
-    "2027-04-05": { term: "청명" }, "2027-04-20": { term: "곡우" },
-    "2027-05-05": { holiday: "어린이날" }, "2027-05-06": { term: "입하" }, "2027-05-13": { holiday: "부처님오신날" }, "2027-05-21": { term: "소만" },
-    "2027-06-06": { holiday: "현충일", term: "망종" }, "2027-06-07": { holiday: "대체공휴일" }, "2027-06-22": { term: "하지" },
-    "2027-07-07": { term: "소서" }, "2027-07-16": { term: "초복" }, "2027-07-23": { term: "대서" }, "2027-07-26": { term: "중복" },
-    "2027-08-08": { term: "입추" }, "2027-08-15": { holiday: "광복절", term: "말복" }, "2027-08-16": { holiday: "대체공휴일" }, "2027-08-23": { term: "처서" },
-    "2027-09-08": { term: "백로" }, "2027-09-14": { holiday: "추석 연휴" }, "2027-09-15": { holiday: "추석" }, "2027-09-16": { holiday: "추석 연휴" }, "2027-09-23": { term: "추분" },
-    "2027-10-03": { holiday: "개천절" }, "2027-10-04": { holiday: "대체공휴일" }, "2027-10-09": { holiday: "한글날", term: "한로" }, "2027-10-24": { term: "상강" },
-    "2027-11-08": { term: "입동" }, "2027-11-23": { term: "소설" },
-    "2027-12-08": { term: "대설" }, "2027-12-22": { term: "동지" }, "2027-12-25": { holiday: "성탄절" }
+    "2026-12-07": { term: "대설" }, "2026-12-22": { term: "동지" }, "2026-12-25": { holiday: "성탄절" }
   };
 
-  // 음력 연산
   function getExactLunarDate(year, month, day) {
-    if (year === 2027 && month === 2 && day === 6) return "1.1";
     try {
       const dateObj = new Date(year, month - 1, day);
       const formatter = new Intl.DateTimeFormat('ko-KR-u-ca-chinese', { month: 'numeric', day: 'numeric' });
@@ -146,9 +159,7 @@
         if (part.type === 'day') d = part.value.replace('일', '').trim();
       }
       return `${m}.${d}`;
-    } catch (e) {
-      return '';
-    }
+    } catch (e) { return ''; }
   }
 
   function editCalendarTitle() {
@@ -157,7 +168,6 @@
       calendarTitle = newTitle.trim();
       document.getElementById("calendar-main-title").innerText = calendarTitle;
       document.title = calendarTitle;
-
       if (currentUser) {
         db.collection("users").doc(currentUser.uid).set({ title: calendarTitle }, { merge: true });
       }
@@ -186,7 +196,6 @@
       statusText.innerText = "🔒 동기화 미연결";
       btnLogin.style.display = "inline-block";
       btnLogout.style.display = "none";
-      userEvents = {};
       renderCalendar();
     }
   });
@@ -250,19 +259,19 @@
   }
 
   function addEvent(dateStr) {
-    if (!currentUser) {
-      alert("일정을 저장하려면 먼저 [구글 계정 로그인]을 진행해 주세요!");
-      return;
-    }
-    const memo = prompt(`${dateStr} 일정을 입력하세요:`, userEvents[dateStr] || "");
+    const currentMemo = userEvents[dateStr] || "";
+    const memo = prompt(`${dateStr} 일정을 입력하세요 (삭제 시 빈칸으로 두고 확인):`, currentMemo);
     if (memo !== null) {
       if (memo.trim() === "") {
         delete userEvents[dateStr];
       } else {
         userEvents[dateStr] = memo.trim();
       }
-      db.collection("users").doc(currentUser.uid).set({ events: userEvents }, { merge: true })
-        .then(() => { renderCalendar(); });
+      renderCalendar();
+
+      if (currentUser) {
+        db.collection("users").doc(currentUser.uid).set({ events: userEvents }, { merge: true });
+      }
     }
   }
 
@@ -271,18 +280,24 @@
     db.collection("users").doc(currentUser.uid).get().then(doc => {
       if (doc.exists) {
         const data = doc.data();
-        if (data.events) userEvents = data.events;
+        if (data.events) {
+          userEvents = Object.assign({}, userEvents, data.events);
+        }
         if (data.title) {
           calendarTitle = data.title;
           document.getElementById("calendar-main-title").innerText = calendarTitle;
           document.title = calendarTitle;
         }
       }
+      // 기본 저장된 일정을 Firebase 서버로 자동 보관
+      db.collection("users").doc(currentUser.uid).set({ events: userEvents }, { merge: true });
       renderCalendar();
+      checkTodayAlert();
     });
   }
 
   renderCalendar();
+  checkTodayAlert();
 </script>
 </body>
 </html>
