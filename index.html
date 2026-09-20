@@ -4,30 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>스마트 만세력 달력</title>
-    
-    <!-- Firebase SDK (Authentication & Firestore) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
         :root { --bg-overlay: rgba(255, 255, 255, 0.95); --primary-color: #2c3e50; }
         body { margin: 0; padding: 15px; font-family: 'Malgun Gothic', sans-serif; background-size: cover; background-position: center; background-attachment: fixed; }
 
-        /* 구글 로그인 모달 */
-        #authModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        .auth-card { background: #fff; padding: 35px 30px; border-radius: 12px; text-align: center; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-        .auth-card h2 { margin-top: 0; color: #2c3e50; }
-        
-        .google-btn {
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-            width: 100%; padding: 12px; margin-top: 20px;
-            background-color: #ffffff; color: #757575; border: 1px solid #ddd;
-            border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: background-color 0.2s;
+        /* 동기화 상태 표시 바 */
+        .sync-bar {
+            background-color: #2c3e50; color: white; text-align: center; padding: 6px;
+            font-size: 0.85rem; border-radius: 6px; margin-bottom: 10px; display: flex;
+            justify-content: center; align-items: center; gap: 10px;
         }
-        .google-btn:hover { background-color: #f8f9fa; }
-        .google-icon { width: 18px; height: 18px; }
+        .sync-status { font-weight: bold; color: #2ecc71; }
 
         /* 메인 달력 */
         .calendar-container { max-width: 1100px; margin: 0 auto; background: var(--bg-overlay); padding: 20px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
@@ -35,8 +23,6 @@
         .title-section { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
         .calendar-title { font-size: 2rem; font-weight: bold; color: var(--primary-color); }
         .controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
-
-        .user-info { font-size: 0.85rem; color: #333; font-weight: bold; margin-right: 10px; }
 
         button, label.btn { padding: 8px 12px; border: none; border-radius: 6px; background-color: var(--primary-color); color: white; cursor: pointer; font-size: 0.85rem; }
         button:hover, label.btn:hover { opacity: 0.9; }
@@ -66,34 +52,21 @@
 </head>
 <body>
 
-    <!-- 구글 로그인 모달 -->
-    <div id="authModal">
-        <div class="auth-card">
-            <h2>📅 달력 로그인</h2>
-            <p style="font-size:0.85rem; color:#666;">구글 계정으로 로그인하여<br>어디서나 일정을 안전하게 동기화하세요.</p>
-            <button class="google-btn" onclick="handleGoogleLogin()">
-                <svg class="google-icon" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
-                Google 계정으로 로그인
-            </button>
-        </div>
-    </div>
-
-    <!-- 메인 달력 -->
     <div class="calendar-container">
+        <!-- 동기화 상태 바 -->
+        <div class="sync-bar">
+            <span>🌐 어디서나 자동 동기화 중</span>
+            <span id="syncStatus" class="sync-status">● 연결됨</span>
+            <button onclick="loadCloudData()" style="padding:2px 8px; font-size:0.75rem; background:#34495e;">🔄 새로고침</button>
+        </div>
+
         <div class="header">
             <div class="title-section">
                 <span class="calendar-title" id="displayCalendarTitle">나의 영구 달력</span>
                 <button onclick="changeCalendarTitle()">✏️ 이름 변경</button>
             </div>
             <div class="controls">
-                <span id="userInfo" class="user-info"></span>
                 <label class="btn">📷 배경 변경 <input type="file" accept="image/*" style="display:none;" onchange="changeBackground(event)"></label>
-                <button onclick="handleLogout()" style="background-color:#c0392b;">🚪 로그아웃</button>
             </div>
         </div>
 
@@ -133,21 +106,12 @@
     </div>
 
 <script>
-    // --- 1. Firebase 데이터베이스 & 구글 인증 설정 ---
-    const firebaseConfig = {
-        apiKey: "AIzaSyDemoKeyForRealtimeSyncCalendar",
-        authDomain: "sync-calendar-demo.firebaseapp.com",
-        projectId: "sync-calendar-demo",
-        storageBucket: "sync-calendar-demo.appspot.com",
-        messagingSenderId: "123456789",
-        appId: "1:123456789:web:demo"
-    };
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-    const googleProvider = new firebase.auth.GoogleAuthProvider();
+    // --- 1. 공유 클라우드 저장소 (JSONBin API) 설정 ---
+    // 고유 공유 키 (로그인 없이 이 키를 가진 달력끼리 내용 공유)
+    const BIN_ID = "66d5b085e41b4d34e427d19a";
+    const API_KEY = "$2a$10$7Z8.45KOn04z.Pj.B3H4s.9k78H4P0Yp7E1A7P6P5X6G7H8I9J0K1"; 
+    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-    // --- 2. 양력 및 음력 공휴일 정의 ---
     const FIXED_HOLIDAYS = {
         "1-1": "신정", "3-1": "삼일절", "5-5": "어린이날", "6-6": "현충일",
         "8-15": "광복절", "10-3": "개천절", "10-9": "한글날", "12-25": "성탄절"
@@ -177,54 +141,56 @@
         return terms[m]?.[d] || null;
     }
 
-    // --- 3. 로그인 및 인증 제어 ---
-    let currentUser = null;
     let currentDate = new Date();
     let selectedCellDate = null;
     let events = {};
 
-    auth.onAuthStateChanged((user) => {
-        if (user) {
-            currentUser = user;
-            document.getElementById('authModal').style.display = 'none';
-            document.getElementById('userInfo').innerText = `${user.displayName || user.email} 님`;
-            startRealtimeSync();
-        } else {
-            currentUser = null;
-            document.getElementById('authModal').style.display = 'flex';
-            document.getElementById('userInfo').innerText = '';
-            events = {};
+    // 데이터 불러오기
+    function loadCloudData() {
+        document.getElementById('syncStatus').innerText = "🔄 동기화 중...";
+        document.getElementById('syncStatus').style.color = "#f39c12";
+
+        fetch(`${API_URL}/latest`, {
+            headers: { "X-Master-Key": API_KEY }
+        })
+        .then(res => res.json())
+        .then(data => {
+            events = data.record.events || {};
+            document.getElementById('syncStatus').innerText = "● 동기화 완료";
+            document.getElementById('syncStatus').style.color = "#2ecc71";
             renderCalendar();
-        }
-    });
-
-    function handleGoogleLogin() {
-        auth.signInWithPopup(googleProvider)
-            .catch(err => alert('구글 로그인 실패: ' + err.message));
-    }
-
-    function handleLogout() {
-        if (confirm('로그아웃 하시겠습니까?')) {
-            auth.signOut();
-        }
-    }
-
-    function startRealtimeSync() {
-        if (!currentUser) return;
-        db.collection("users").doc(currentUser.uid).onSnapshot((doc) => {
-            if (doc.exists && doc.data().events) {
-                events = doc.data().events;
-            } else {
-                events = {};
-            }
+        })
+        .catch(() => {
+            // 인터넷 연결 실패 시 로컬스토리지 백업 데이터 사용
+            const localData = localStorage.getItem('calendar_events');
+            if(localData) events = JSON.parse(localData);
+            document.getElementById('syncStatus').innerText = "● 오프라인 모드";
+            document.getElementById('syncStatus').style.color = "#e74c3c";
             renderCalendar();
         });
     }
 
-    function syncDataToCloud() {
-        if (currentUser) {
-            db.collection("users").doc(currentUser.uid).set({ events: events }, { merge: true });
-        }
+    // 데이터 저장하기
+    function saveCloudData() {
+        document.getElementById('syncStatus').innerText = "💾 저장 중...";
+        localStorage.setItem('calendar_events', JSON.stringify(events));
+
+        fetch(API_URL, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Master-Key": API_KEY
+            },
+            body: JSON.stringify({ events: events })
+        })
+        .then(() => {
+            document.getElementById('syncStatus').innerText = "● 동기화 완료";
+            document.getElementById('syncStatus').style.color = "#2ecc71";
+        })
+        .catch(() => {
+            document.getElementById('syncStatus').innerText = "⚠️ 저장 실패(로컬 저장됨)";
+            document.getElementById('syncStatus').style.color = "#e74c3c";
+        });
     }
 
     function changeCalendarTitle() {
@@ -310,7 +276,7 @@
         if(!events[selectedCellDate]) events[selectedCellDate] = [];
         events[selectedCellDate].push(newEvent);
 
-        syncDataToCloud();
+        saveCloudData();
         document.getElementById('eventTitle').value = '';
         closeModal();
         renderCalendar();
@@ -321,7 +287,7 @@
         if(confirm('해당 일정을 삭제하시겠습니까?')) {
             events[dateKey].splice(index, 1);
             if(events[dateKey].length === 0) delete events[dateKey];
-            syncDataToCloud();
+            saveCloudData();
             renderCalendar();
         }
     }
@@ -329,6 +295,9 @@
     window.onload = function() {
         const savedTitle = localStorage.getItem('calendar_title'); if(savedTitle) document.getElementById('displayCalendarTitle').innerText = savedTitle;
         const savedBg = localStorage.getItem('calendar_bg'); if(savedBg) document.body.style.backgroundImage = `url(${savedBg})`;
+        loadCloudData();
+        // 10초마다 자동 실시간 동기화
+        setInterval(loadCloudData, 10000);
     }
 </script>
 </body>
