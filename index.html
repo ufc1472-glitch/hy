@@ -33,7 +33,7 @@
     .day-header.sun { color: #e53e3e; }
     .day-header.sat { color: #3182ce; }
     
-    .date-cell { min-height: 85px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px; background: white; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-start; text-align: left; overflow: hidden; }
+    .date-cell { min-height: 90px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px; background: white; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-start; text-align: left; overflow: hidden; }
     .date-cell:hover { background: #ebf8ff; }
 
     .date-header-row { display: flex; align-items: baseline; justify-content: flex-start; gap: 3px; }
@@ -42,9 +42,28 @@
     .sat .date-num { color: #3182ce; }
     .lunar-text { font-size: 10px; color: #718096; }
 
-    .solar-term { font-size: 9px; color: #2f855a; background: #c6f6d5; padding: 1px 2px; border-radius: 3px; margin-top: 2px; width: fit-content; white-space: nowrap; }
-    .holiday-tag { font-size: 9px; color: #9b2c2c; background: #fed7d7; padding: 1px 2px; border-radius: 3px; margin-top: 2px; width: fit-content; font-weight: bold; white-space: nowrap; }
-    .event-item { background: #ccfbf1; color: #0f766e; font-size: 10px; padding: 1px 3px; border-radius: 3px; margin-top: 2px; text-align: left; font-weight: bold; word-break: break-all; }
+    .solar-term { font-size: 9px; color: #2f855a; background: #c6f6d5; padding: 1px 3px; border-radius: 3px; margin-top: 2px; width: fit-content; white-space: nowrap; }
+    .holiday-tag { font-size: 9px; color: #9b2c2c; background: #fed7d7; padding: 1px 3px; border-radius: 3px; margin-top: 2px; width: fit-content; font-weight: bold; white-space: nowrap; }
+    
+    /* 일정 아이템 - 기본 깔끔한 디자인 */
+    .event-item { 
+      font-size: 11px; 
+      padding: 2px 4px; 
+      border-radius: 4px; 
+      margin-top: 2px; 
+      text-align: left; 
+      font-weight: bold; 
+      line-height: 1.2;
+      word-break: break-all;
+    }
+
+    /* 형광펜 색상 정의 */
+    .hl-mint   { background: #ccfbf1; color: #0f766e; }
+    .hl-yellow { background: #fef08a; color: #854d0e; }
+    .hl-green  { background: #bbf7d0; color: #166534; }
+    .hl-pink   { background: #fbcfe8; color: #9d174d; }
+    .hl-blue   { background: #bfdbfe; color: #1e40af; }
+    .hl-orange { background: #fed7aa; color: #9a3412; }
 
     /* 모달 레이아웃 */
     .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
@@ -53,6 +72,11 @@
     .form-group { margin-bottom: 12px; text-align: left; }
     .form-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #4a5568; }
     .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; }
+    
+    .color-options { display: flex; gap: 8px; margin-top: 4px; }
+    .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+    .color-btn.selected { border-color: #2d3748; transform: scale(1.1); }
+
     .modal-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; }
     .btn-save { background: #3182ce; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
     .btn-delete { background: #e53e3e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
@@ -75,7 +99,7 @@
 
   <div class="nav-area">
     <button class="nav-btn" onclick="changeMonth(-1)">◀ 이전달</button>
-    <span id="month-title" class="current-month">2026년 9월</span>
+    <span id="month-title" class="current-month">2026년 10월</span>
     <button class="nav-btn" onclick="changeMonth(1)">다음달 ▶</button>
   </div>
 
@@ -100,6 +124,17 @@
       <input type="text" id="inputMemo" placeholder="예: 서부본부 교육, 생일 등">
     </div>
     <div class="form-group">
+      <label>형광펜 (배경 색상)</label>
+      <select id="selectColor">
+        <option value="hl-mint">민트 (기본)</option>
+        <option value="hl-yellow">노랑</option>
+        <option value="hl-green">초록</option>
+        <option value="hl-pink">분홍</option>
+        <option value="hl-blue">파랑</option>
+        <option value="hl-orange">주황</option>
+      </select>
+    </div>
+    <div class="form-group">
       <label>양력 / 음력 선택</label>
       <select id="selectCalendarType">
         <option value="solar">양력 기준</option>
@@ -115,7 +150,7 @@
       </select>
     </div>
     <div class="form-group">
-      <label>알림 시점 선택</label>
+      <label>알림 시점</label>
       <select id="selectAlertTiming">
         <option value="0">당일 알림</option>
         <option value="1">1일 전 (전일) 알림</option>
@@ -149,17 +184,17 @@
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  let currentDate = new Date(2026, 8, 1);
+  let currentDate = new Date(2026, 9, 1);
   let currentUser = null;
   let selectedDateStr = "";
   
   let userEvents = {
-    "2026-09-14": { memo: "서부본부 교육", calType: "solar", repeat: "none", timing: "0", time: "09:00" },
-    "2026-09-18": { memo: "서부본부 교육14:00", calType: "solar", repeat: "none", timing: "0", time: "14:00" },
-    "2026-09-29": { memo: "경환 생일", calType: "solar", repeat: "yearly", timing: "0", time: "09:00" },
-    "2026-10-04": { memo: "집사람 탄신일", calType: "solar", repeat: "yearly", timing: "0", time: "09:00" },
-    "2026-10-16": { memo: "장모님 생신", calType: "lunar", repeat: "yearly", timing: "1", time: "09:00" },
-    "2026-10-25": { memo: "매부생일", calType: "solar", repeat: "yearly", timing: "0", time: "09:00" }
+    "2026-09-14": { memo: "서부본부 교육", calType: "solar", repeat: "none", timing: "0", time: "09:00", color: "hl-mint" },
+    "2026-09-18": { memo: "서부본부 교육", calType: "solar", repeat: "none", timing: "0", time: "14:00", color: "hl-mint" },
+    "2026-09-29": { memo: "경환 생일", calType: "solar", repeat: "yearly", timing: "0", time: "09:00", color: "hl-yellow" },
+    "2026-10-04": { memo: "집사람 탄신일", calType: "solar", repeat: "yearly", timing: "0", time: "09:00", color: "hl-pink" },
+    "2026-10-16": { memo: "장모님 생신", calType: "lunar", repeat: "yearly", timing: "1", time: "09:00", color: "hl-orange" },
+    "2026-10-25": { memo: "매부생일", calType: "solar", repeat: "yearly", timing: "0", time: "09:00", color: "hl-yellow" }
   };
   let calendarTitle = "PRO 스마트 달력";
 
@@ -167,7 +202,7 @@
     Notification.requestPermission();
   }
 
-  // 알림 타이머 (전일/당일 계산 포함)
+  // 알림 타이머
   setInterval(checkTimerAlerts, 30000);
 
   function checkTimerAlerts() {
@@ -179,8 +214,6 @@
       if (!item.time) continue;
 
       const timingOffset = parseInt(item.timing || "0", 10);
-      
-      // 오늘 날짜 기준으로 offset만큼 더한 날짜(이벤트 목표일) 구하기
       const targetCheckDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + timingOffset);
       const ty = targetCheckDate.getFullYear();
       const tm = String(targetCheckDate.getMonth() + 1).padStart(2, '0');
@@ -292,7 +325,7 @@
     let eventList = [];
 
     for (let key in userEvents) {
-      const item = typeof userEvents[key] === 'string' ? { memo: userEvents[key], calType: 'solar', repeat: 'none', timing: '0', time: '' } : userEvents[key];
+      const item = typeof userEvents[key] === 'string' ? { memo: userEvents[key], calType: 'solar', repeat: 'none', timing: '0', time: '', color: 'hl-mint' } : userEvents[key];
       const isLunar = item.calType === 'lunar';
 
       if (key === fullKey) {
@@ -350,12 +383,11 @@
       if (info.holiday) extraHtml += `<div class="holiday-tag">🔴 ${info.holiday}</div>`;
       if (info.term) extraHtml += `<div class="solar-term">🥬 ${info.term}</div>`;
       
+      // 알림시간/D-day 표시는 숨기고, 음력 표시 및 형광펜 색상 반영
       matchedEvents.forEach(evt => {
-        let typeBadge = evt.calType === 'lunar' ? '(음)' : '';
-        let repeatIcon = evt.repeat === 'yearly' ? '🔄매년 ' : (evt.repeat === 'monthly' ? '🔄매월 ' : '');
-        let timingBadge = evt.timing && evt.timing !== '0' ? `[${evt.timing}일전알림]` : '';
-        let timeText = evt.time ? ` [${evt.time}]` : '';
-        extraHtml += `<div class="event-item">📌 ${typeBadge}${repeatIcon}${evt.memo}${timingBadge}${timeText}</div>`;
+        let typeBadge = evt.calType === 'lunar' ? '(음) ' : '';
+        let colorClass = evt.color || 'hl-mint';
+        extraHtml += `<div class="event-item ${colorClass}">${typeBadge}${evt.memo}</div>`;
       });
 
       cell.innerHTML = `
@@ -378,6 +410,7 @@
     
     const existing = userEvents[dateStr] || {};
     document.getElementById("inputMemo").value = existing.memo || (typeof existing === 'string' ? existing : "");
+    document.getElementById("selectColor").value = existing.color || "hl-mint";
     document.getElementById("selectCalendarType").value = existing.calType || "solar";
     document.getElementById("selectRepeat").value = existing.repeat || "none";
     document.getElementById("selectAlertTiming").value = existing.timing || "0";
@@ -392,6 +425,7 @@
 
   function saveEvent() {
     const memo = document.getElementById("inputMemo").value.trim();
+    const color = document.getElementById("selectColor").value;
     const calType = document.getElementById("selectCalendarType").value;
     const repeat = document.getElementById("selectRepeat").value;
     const timing = document.getElementById("selectAlertTiming").value;
@@ -403,7 +437,7 @@
     if (memo === "") {
       delete userEvents[selectedDateStr];
     } else {
-      userEvents[selectedDateStr] = { memo, calType, repeat, timing, time, lunarMD, alerted: false };
+      userEvents[selectedDateStr] = { memo, color, calType, repeat, timing, time, lunarMD, alerted: false };
     }
 
     if (currentUser) {
