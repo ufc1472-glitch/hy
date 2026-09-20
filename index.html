@@ -4,20 +4,15 @@
     <meta charset="UTF-8">
     <!-- 모바일 손가락 확대/축소 완벽 허용 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>스마트 만세력 & 실시간 동기화 달력</title>
+    <title>스마트 만세력 달력</title>
     
-    <!-- Firebase SDK (실시간 동기화 지원) -->
+    <!-- Firebase SDK (실시간 자동 연동) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <style>
         :root { --bg-overlay: rgba(255, 255, 255, 0.95); --primary-color: #2c3e50; }
         body { margin: 0; padding: 15px; font-family: 'Malgun Gothic', sans-serif; background-size: cover; background-position: center; background-attachment: fixed; }
-
-        /* 동기화 코드 설정 모달 (최초 1회만 표시) */
-        #syncSetupModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        .setup-card { background: #fff; padding: 30px; border-radius: 12px; text-align: center; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-        .setup-card input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; text-align: center; }
 
         /* 메인 달력 */
         .calendar-container { max-width: 1100px; margin: 0 auto; background: var(--bg-overlay); padding: 20px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
@@ -54,18 +49,8 @@
 </head>
 <body>
 
-    <!-- 동기화 코드 모달 (로그인 없이 최초 1회 연결용) -->
-    <div id="syncSetupModal" style="display:none;">
-        <div class="setup-card">
-            <h2>📅 동기화 코드 설정</h2>
-            <p style="font-size:0.85rem; color:#666;">PC와 휴대폰에서 동일하게 사용할<br>나만의 동기화 코드를 입력해주세요.</p>
-            <input type="text" id="syncCodeInput" placeholder="예: myhome123">
-            <button onclick="saveSyncCode()" style="width:100%; padding:10px; font-size:1rem;">확인하고 바로 시작하기</button>
-        </div>
-    </div>
-
-    <!-- 메인 달력 -->
-    <div class="calendar-container" id="mainContent">
+    <!-- 메인 달력 (접속 시 바로 표시) -->
+    <div class="calendar-container">
         <div class="header">
             <div class="title-section">
                 <span class="calendar-title" id="displayCalendarTitle">나의 영구 달력</span>
@@ -73,7 +58,6 @@
             </div>
             <div class="controls">
                 <label class="btn">📷 배경 변경 <input type="file" accept="image/*" style="display:none;" onchange="changeBackground(event)"></label>
-                <button onclick="resetSyncCode()" style="background-color:#7f8c8d;">⚙️ 동기화 코드 변경</button>
             </div>
         </div>
 
@@ -86,7 +70,7 @@
         <div class="calendar-grid" id="calendarGrid"></div>
     </div>
 
-    <!-- 일정 및 알람 모달 -->
+    <!-- 일정 및 알람 등록 창 -->
     <div class="modal" id="eventModal">
         <div class="modal-content">
             <h3>일정 및 알람 등록</h3>
@@ -107,13 +91,13 @@
                 <option value="monthly">매월 반복</option>
                 <option value="yearly">매년 무제한 반복</option>
             </select>
-            <button onclick="saveEvent()">저장 (PC/폰 자동 동기화)</button>
+            <button onclick="saveEvent()">저장</button>
             <button onclick="closeModal()" style="background:#7f8c8d;">취소</button>
         </div>
     </div>
 
 <script>
-    // --- 1. Firebase 데이터베이스 설정 ---
+    // --- 1. Firebase 데이터베이스 연동 ---
     const firebaseConfig = {
         apiKey: "AIzaSyDemoKeyForRealtimeSyncCalendar",
         authDomain: "sync-calendar-demo.firebaseapp.com",
@@ -124,6 +108,7 @@
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const SHARED_KEY = "my_shared_calendar"; // 공용 자동 동기화 키
 
     // --- 2. 천문우주지식포털 산출 기준 알고리즘 ---
     const LUNAR_HOLIDAYS = {
@@ -183,45 +168,17 @@
         return { isHoliday: false, name: "" };
     }
 
-    // --- 3. 상태 관리 및 자동 연동 ---
+    // --- 3. 실시간 자동 연동 및 기본 기능 ---
     let currentDate = new Date();
     let selectedCellDate = null;
-    let syncCode = localStorage.getItem('calendar_sync_code') || '';
     let events = {};
 
-    function initCalendar() {
-        if (!syncCode) {
-            document.getElementById('syncSetupModal').style.display = 'flex';
-        } else {
-            document.getElementById('syncSetupModal').style.display = 'none';
-            startRealtimeSync();
-        }
-    }
-
-    function saveSyncCode() {
-        const input = document.getElementById('syncCodeInput').value.trim();
-        if(!input) return alert('동기화 코드를 입력해주세요.');
-        syncCode = input;
-        localStorage.setItem('calendar_sync_code', syncCode);
-        document.getElementById('syncSetupModal').style.display = 'none';
-        startRealtimeSync();
-    }
-
-    function resetSyncCode() {
-        const newCode = prompt("새로운 동기화 코드를 입력하세요 (스마트폰과 동일하게 설정):", syncCode);
-        if(newCode) {
-            syncCode = newCode.trim();
-            localStorage.setItem('calendar_sync_code', syncCode);
-            startRealtimeSync();
-        }
-    }
-
     function startRealtimeSync() {
-        db.collection("users").doc(syncCode).onSnapshot((doc) => {
+        db.collection("users").doc(SHARED_KEY).onSnapshot((doc) => {
             if (doc.exists && doc.data().events) {
                 events = doc.data().events;
             } else {
-                events = JSON.parse(localStorage.getItem('calendar_events_' + syncCode) || '{}');
+                events = JSON.parse(localStorage.getItem('calendar_events') || '{}');
             }
             renderCalendar();
         });
@@ -300,10 +257,8 @@
     function closeModal() { document.getElementById('eventModal').style.display = 'none'; }
 
     function syncDataToCloud() {
-        if(syncCode) {
-            localStorage.setItem('calendar_events_' + syncCode, JSON.stringify(events));
-            db.collection("users").doc(syncCode).set({ events: events }, { merge: true });
-        }
+        localStorage.setItem('calendar_events', JSON.stringify(events));
+        db.collection("users").doc(SHARED_KEY).set({ events: events }, { merge: true });
     }
 
     function saveEvent() {
@@ -342,7 +297,7 @@
     window.onload = function() {
         const savedTitle = localStorage.getItem('calendar_title'); if(savedTitle) document.getElementById('displayCalendarTitle').innerText = savedTitle;
         const savedBg = localStorage.getItem('calendar_bg'); if(savedBg) document.body.style.backgroundImage = `url(${savedBg})`;
-        initCalendar();
+        startRealtimeSync();
     }
 </script>
 </body>
