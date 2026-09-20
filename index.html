@@ -2,38 +2,72 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <!-- 스마트폰에서 자유롭게 확대/축소(핀치 줌) 가능하도록 설정 -->
+  <!-- 스마트폰 자유 확대/축소(핀치 줌) 허용 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>PRO 스마트 달력 (천문우주지식포털 기준)</title>
+  <title>PRO 스마트 달력</title>
 
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", "맑은 고딕", sans-serif; }
-    body { background-color: #f0f4f8; margin: 0; padding: 10px; display: flex; justify-content: center; }
     
+    body {
+      background-color: #f0f4f8;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      margin: 0;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    /* 달력 배경 및 투명 오버레이 레이어 */
     .calendar-container {
-      background: #ffffff;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(5px);
       width: 100%;
       max-width: 900px;
       padding: 12px;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
     }
 
-    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #e2e8f0; padding: 8px 12px; border-radius: 8px; }
-    .status-text { font-size: 13px; font-weight: bold; color: #2d3748; }
-    .data-btns button { font-size: 11px; padding: 4px 8px; margin-left: 4px; cursor: pointer; border-radius: 4px; border: 1px solid #cbd5e0; background: #fff; }
+    .top-bar { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 10px; 
+      background: rgba(226, 232, 240, 0.8); 
+      padding: 8px 12px; 
+      border-radius: 8px; 
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    
+    .status-text { font-size: 12px; font-weight: bold; color: #2d3748; }
+    
+    .bg-control-btns button, .data-btns button { 
+      font-size: 11px; 
+      padding: 4px 8px; 
+      border-radius: 4px; 
+      border: 1px solid #cbd5e0; 
+      background: #ffffff; 
+      cursor: pointer; 
+      font-weight: bold;
+    }
 
     .title-area { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 12px; }
     .title-area h2 { margin: 0; font-size: 20px; color: #1a202c; }
-    .btn-icon { background: none; border: none; cursor: pointer; font-size: 14px; }
+    .btn-edit-title { background: #edf2f7; border: 1px solid #cbd5e0; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; }
 
     .nav-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .nav-btn { background: #3182ce; color: white; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
     .current-month { font-size: 18px; font-weight: bold; color: #2d3748; }
 
-    /* 7열 그리드 - 스마트폰 가로 폭에 맞춰 자동 조절 */
+    /* 7열 그리드 - 스마트폰 가로 폭 맞춤 */
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; width: 100%; text-align: center; }
-    .day-header { font-weight: bold; padding: 6px 0; font-size: 13px; background: #edf2f7; border-radius: 4px; }
+    .day-header { font-weight: bold; padding: 6px 0; font-size: 13px; background: rgba(237, 242, 247, 0.9); border-radius: 4px; }
     .day-header.sun { color: #e53e3e; }
     .day-header.sat { color: #3182ce; }
 
@@ -42,7 +76,7 @@
       border: 1px solid #e2e8f0;
       border-radius: 4px;
       padding: 3px;
-      background: #ffffff;
+      background: rgba(255, 255, 255, 0.85);
       cursor: pointer;
       display: flex;
       flex-direction: column;
@@ -50,7 +84,7 @@
       text-align: left;
       overflow: hidden;
     }
-    .date-cell:hover { background: #f7fafc; }
+    .date-cell:hover { background: #ffffff; }
 
     .date-num-row { display: flex; align-items: baseline; gap: 3px; flex-wrap: wrap; margin-bottom: 2px; }
     .date-num { font-size: 14px; font-weight: bold; }
@@ -73,7 +107,7 @@
       word-break: break-all;
     }
 
-    /* 형광펜(배경색) 및 글자색 조합 클래스 */
+    /* 형광펜 및 글자색 스타일 */
     .hl-none { background: #edf2f7; }
     .hl-yellow { background: #fef08a; }
     .hl-mint { background: #ccfbf1; }
@@ -86,7 +120,7 @@
     .fc-blue { color: #2b6cb0; }
     .fc-green { color: #2f855a; }
 
-    /* 모달 팝업 레이아웃 */
+    /* 모달 레이아웃 */
     .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
     .modal-content { background: white; padding: 16px; border-radius: 10px; width: 92%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
     .modal-content h3 { margin-top: 0; font-size: 16px; color: #2d3748; }
@@ -107,16 +141,25 @@
 
 <div class="calendar-container">
   <div class="top-bar">
-    <span class="status-text">💾 데이터 기기 영구 보관 모드</span>
+    <span class="status-text">💾 기기 영구 보관 모드</span>
+    
+    <!-- 배경 사진 설정 및 백업/복원 버튼 -->
+    <div class="bg-control-btns">
+      <button onclick="document.getElementById('bgFileInput').click()">🖼️ 배경 사진 선택</button>
+      <button onclick="removeBgImage()">❌ 배경 삭제</button>
+      <input type="file" id="bgFileInput" accept="image/*" style="display:none" onchange="uploadBgImage(event)">
+    </div>
+
     <div class="data-btns">
       <button onclick="exportData()">백업(저장)</button>
       <button onclick="importData()">복원(열기)</button>
     </div>
   </div>
 
+  <!-- 달력 제목 및 수정 버튼 복구 -->
   <div class="title-area">
     <h2 id="main-title">PRO 스마트 달력</h2>
-    <button class="btn-icon" onclick="editTitle()">✏️</button>
+    <button class="btn-edit-title" onclick="editCalendarTitle()">✏️ 제목 수정</button>
   </div>
 
   <div class="nav-area">
@@ -144,7 +187,7 @@
     
     <div class="form-group">
       <label>일정 메모</label>
-      <input type="text" id="inputMemo" placeholder="예: 현장 점검, 지우 생일, 제사">
+      <input type="text" id="inputMemo" placeholder="예: 현장 점검, 생일, 제사">
     </div>
 
     <div class="form-row">
@@ -219,9 +262,48 @@
   let userEvents = JSON.parse(localStorage.getItem("smart_calendar_events") || "{}");
   let calendarTitle = localStorage.getItem("smart_calendar_title") || "PRO 스마트 달력";
 
+  // 기존 배경 사진 불러오기
+  const savedBg = localStorage.getItem("smart_calendar_bg");
+  if (savedBg) document.body.style.backgroundImage = `url('${savedBg}')`;
+
   document.getElementById("main-title").innerText = calendarTitle;
 
-  // 국립천문연구원(천문우주지식포털) 음력 계산 표준 알고리즘
+  // 제목 수정 기능
+  function editCalendarTitle() {
+    const newTitle = prompt("변경할 달력 제목을 입력하세요:", calendarTitle);
+    if (newTitle !== null && newTitle.trim() !== "") {
+      calendarTitle = newTitle.trim();
+      document.getElementById("main-title").innerText = calendarTitle;
+      localStorage.setItem("smart_calendar_title", calendarTitle);
+    }
+  }
+
+  // 배경 사진 등록 기능
+  function uploadBgImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const bgData = e.target.result;
+        document.body.style.backgroundImage = `url('${bgData}')`;
+        try {
+          localStorage.setItem("smart_calendar_bg", bgData);
+        } catch(err) {
+          alert("사진 용량이 커서 브라우저 저장이 안 될 수 있으나, 현재 화면에는 바로 적용됩니다.");
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  // 배경 사진 삭제 기능
+  function removeBgImage() {
+    document.body.style.backgroundImage = "";
+    localStorage.removeItem("smart_calendar_bg");
+    alert("배경 사진이 삭제되었습니다.");
+  }
+
+  // 음력 표준 산출
   function getExactLunarDate(year, month, day) {
     try {
       const dateObj = new Date(year, month - 1, day);
@@ -236,7 +318,7 @@
     } catch (e) { return ''; }
   }
 
-  // 24절기 천문 기준 표 (연도별 매핑)
+  // 천문우주지식포털 산출 24절기
   const solarTerms = {
     "2026-02-04":"입춘","2026-02-19":"우수","2026-03-05":"경칩","2026-03-20":"춘분","2026-04-05":"청명","2026-04-20":"곡우",
     "2026-05-05":"입하","2026-05-21":"소만","2026-06-06":"망종","2026-06-21":"하지","2026-07-07":"소서","2026-07-23":"대서",
@@ -248,54 +330,37 @@
     "2027-11-07":"입동","2027-11-22":"소설","2027-12-07":"대설","2027-12-22":"동지"
   };
 
-  // 삼복(초복, 중복, 말복) 천문 산출 기준
+  // 삼복 (초복, 중복, 말복)
   const bokDays = {
     "2026-07-15":"초복","2026-07-25":"중복","2026-08-14":"말복",
     "2027-07-16":"초복","2027-07-26":"중복","2027-08-15":"말복"
   };
 
-  // 고정 양력 공휴일
   const fixedHolidays = {
     "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날",
     "06-06": "현충일", "08-15": "광복절", "10-03": "개천절",
     "10-09": "한글날", "12-25": "성탄절"
   };
 
-  // 명절 및 대체공휴일 계산
   function getHolidayInfo(year, month, day, lunarMD) {
     const mm = String(month).padStart(2, '0');
     const dd = String(day).padStart(2, '0');
     const md = `${mm}-${dd}`;
-    const fullDate = `${year}-${md}`;
-    const dateObj = new Date(year, month - 1, day);
-    const dayOfWeek = dateObj.getDay();
 
     if (fixedHolidays[md]) return { name: fixedHolidays[md], isHoliday: true };
 
-    // 음력 명절
     if (lunarMD === "1.1") return { name: "설날", isHoliday: true };
-    if (lunarMD === "12.29" || lunarMD === "12.30") return { name: "설날 연휴", isHoliday: true }; // 음력 그해 마지막 날
-    if (lunarMD === "1.2") return { name: "설날 연휴", isHoliday: true };
+    if (lunarMD === "12.29" || lunarMD === "12.30" || lunarMD === "1.2") return { name: "설날 연휴", isHoliday: true };
 
     if (lunarMD === "8.15") return { name: "추석", isHoliday: true };
     if (lunarMD === "8.14" || lunarMD === "8.16") return { name: "추석 연휴", isHoliday: true };
 
     if (lunarMD === "4.8") return { name: "부처님오신날", isHoliday: true };
 
-    // 대체공휴일 규정 (2027년 설날 대체휴일 등)
+    // 대체공휴일
     if (year === 2027 && month === 2 && day === 8) return { name: "대체공휴일", isHoliday: true };
-    if (year === 2026 && month === 5 && day === 25) return { name: "대체공휴일", isHoliday: true };
 
     return { name: "", isHoliday: false };
-  }
-
-  function editTitle() {
-    const t = prompt("달력 제목을 입력하세요:", calendarTitle);
-    if (t) {
-      calendarTitle = t;
-      document.getElementById("main-title").innerText = calendarTitle;
-      localStorage.setItem("smart_calendar_title", calendarTitle);
-    }
   }
 
   function changeMonth(diff) {
@@ -432,7 +497,6 @@
     renderCalendar();
   }
 
-  // 데이터 백업 및 복원 기능 (영구 보관 보장)
   function exportData() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(userEvents));
     const a = document.createElement('a');
@@ -451,14 +515,13 @@
         userEvents = JSON.parse(event.target.result);
         localStorage.setItem("smart_calendar_events", JSON.stringify(userEvents));
         renderCalendar();
-        alert("일정 데이터가 성공적으로 복원되었습니다.");
+        alert("일정 데이터가 복원되었습니다.");
       };
       reader.readAsText(file);
     };
     input.click();
   }
 
-  // 초기 실행
   renderCalendar();
 </script>
 </body>
