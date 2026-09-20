@@ -2,14 +2,13 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <!-- 화면 확대/축소가 자유롭도록 viewport 설정 -->
+    <!-- 화면 확대/축소가 자유롭도록 설정 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>스마트 만세력 & 일정 달력</title>
     <style>
         :root {
-            --bg-overlay: rgba(255, 255, 255, 0.9);
+            --bg-overlay: rgba(255, 255, 255, 0.92);
             --primary-color: #2c3e50;
-            --accent-color: #3498db;
         }
 
         body {
@@ -19,24 +18,6 @@
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
-            transition: background-image 0.3s ease;
-        }
-
-        /* 로그인 모달 */
-        #loginModal {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 1000;
-        }
-        .login-card {
-            background: #fff; padding: 30px; border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center; width: 300px;
-        }
-        .login-card input {
-            width: 90%; padding: 10px; margin: 10px 0;
-            border: 1px solid #ccc; border-radius: 6px;
         }
 
         /* 메인 컨테이너 */
@@ -44,10 +25,9 @@
             max-width: 1100px;
             margin: 0 auto;
             background: var(--bg-overlay);
-            padding: 25px;
+            padding: 20px;
             border-radius: 16px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-            backdrop-filter: blur(5px);
         }
 
         .header {
@@ -55,16 +35,17 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             border-bottom: 2px solid #ddd;
             padding-bottom: 15px;
+            gap: 10px;
         }
 
         .title-section { display: flex; align-items: center; gap: 10px; }
         .calendar-title { font-size: 1.8rem; font-weight: bold; color: var(--primary-color); }
         
         .controls { display: flex; gap: 8px; flex-wrap: wrap; }
-        button, input[type="file"]::-webkit-file-upload-button {
+        button, label.btn {
             padding: 8px 14px;
             border: none;
             border-radius: 6px;
@@ -72,20 +53,22 @@
             color: white;
             cursor: pointer;
             font-size: 0.9rem;
+            display: inline-block;
         }
-        button:hover { opacity: 0.9; }
+        button:hover, label.btn:hover { opacity: 0.9; }
 
-        /* 달력 그리드 */
+        /* 달력 이동 */
         .month-nav {
             display: flex; justify-content: center; align-items: center;
             gap: 20px; margin-bottom: 15px; font-size: 1.4rem; font-weight: bold;
         }
 
+        /* 달력 그리드 */
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 2px;
-            background: #e0e0e0;
+            background: #ccc;
             border: 1px solid #ccc;
             border-radius: 8px;
             overflow: hidden;
@@ -102,7 +85,7 @@
 
         .day-cell {
             background: white;
-            min-height: 100px;
+            min-height: 105px;
             padding: 6px;
             box-sizing: border-box;
             cursor: pointer;
@@ -118,9 +101,9 @@
         .lunar-info { font-size: 0.75rem; color: #7f8c8d; }
         .solar-term { font-size: 0.75rem; color: #27ae60; font-weight: bold; }
 
-        /* 일정 표시 스타일 */
+        /* 일정 등록 표기 */
         .event-item {
-            margin-top: 3px;
+            margin-top: 4px;
             padding: 2px 4px;
             border-radius: 3px;
             font-size: 0.8rem;
@@ -129,68 +112,59 @@
             align-items: center;
         }
         .event-item .del-btn {
-            background: none; border: none; color: #888;
-            cursor: pointer; font-size: 0.7rem; padding: 0 2px;
+            background: none; border: none; color: #555;
+            cursor: pointer; font-size: 0.75rem; padding: 0 2px; margin-left: 4px;
         }
 
-        /* Modal 일반 */
+        /* 모달 팝업 */
         .modal {
             display: none; position: fixed; top: 0; left: 0;
             width: 100%; height: 100%; background: rgba(0,0,0,0.5);
-            justify-content: center; align-items: center; z-index: 900;
+            justify-content: center; align-items: center; z-index: 999;
         }
         .modal-content {
             background: white; padding: 20px; border-radius: 10px;
-            width: 350px; display: flex; flex-direction: column; gap: 10px;
+            width: 320px; display: flex; flex-direction: column; gap: 10px;
+        }
+        .modal-content input[type="text"], .modal-content select {
+            padding: 8px; border: 1px solid #ccc; border-radius: 4px;
         }
     </style>
 </head>
 <body>
 
-    <!-- 로그인 모달 -->
-    <div id="loginModal">
-        <div class="login-card">
-            <h2>달력 로그인</h2>
-            <input type="text" id="username" placeholder="아이디 입력">
-            <input type="password" id="password" placeholder="비밀번호 입력">
-            <button onclick="login()">로그인</button>
-        </div>
-    </div>
-
-    <!-- 메인 달력 -->
-    <div class="calendar-container" id="mainContent" style="display:none;">
+    <div class="calendar-container">
         <div class="header">
             <div class="title-section">
                 <span class="calendar-title" id="displayCalendarTitle">나의 영구 달력</span>
                 <button onclick="changeCalendarTitle()">✏️ 이름 변경</button>
             </div>
             <div class="controls">
-                <label style="cursor:pointer;" class="button">
+                <label class="btn">
                     📷 배경 변경 <input type="file" id="bgInput" accept="image/*" style="display:none;" onchange="changeBackground(event)">
                 </label>
-                <button onclick="logout()">로그아웃</button>
             </div>
         </div>
 
         <div class="month-nav">
             <button onclick="moveMonth(-1)">◀ 이전달</button>
-            <span id="currentYearMonth">2026년 9월</span>
+            <span id="currentYearMonth"></span>
             <button onclick="moveMonth(1)">다음달 ▶</button>
         </div>
 
-        <div class="calendar-grid" id="calendarGrid">
-            <!-- 자바스크립트로 일별 셀 동적 생성 -->
-        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
     </div>
 
-    <!-- 일정 추가 모달 -->
+    <!-- 일정 및 알람 등록 모달 -->
     <div class="modal" id="eventModal">
         <div class="modal-content">
             <h3>일정 및 알람 등록</h3>
-            <input type="text" id="eventTitle" placeholder="일정 제목">
+            <input type="text" id="eventTitle" placeholder="일정 제목 입력">
             
-            <label><input type="radio" name="calendarType" value="solar" checked> 양력</label>
-            <label><input type="radio" name="calendarType" value="lunar"> 음력</label>
+            <div>
+                <label><input type="radio" name="calendarType" value="solar" checked> 양력</label>
+                <label><input type="radio" name="calendarType" value="lunar"> 음력</label>
+            </div>
 
             <div>
                 <label>글자 색상:</label>
@@ -198,7 +172,7 @@
             </div>
             <div>
                 <label>형광펜 색상:</label>
-                <input type="color" id="hlColor" value="#ffff00">
+                <input type="color" id="hlColor" value="#ffffaa">
             </div>
 
             <label>알람 시점:</label>
@@ -226,90 +200,54 @@
     </div>
 
 <script>
-    // --- 1. 천문우주지식포털 산출 알고리즘 연동 모듈 (간이 구현 알고리즘) ---
-    
-    // 24절기 명칭
-    const SOLAR_TERMS = ["소한","대한","입춘","우수","경칩","춘분","곡우","입하","소만","망종","하지","서서","대서","입추","처서","백로","추분","한로","상강","입동","소설","대설","동지"];
-
-    // 근사 음력 변환 함수 (정밀 음력 데이터 계산기)
+    // 음력 및 절기 계산 (천문우주지식포털 데이터 연산 방식)
     function getLunarDate(year, month, day) {
-        // 실제 천문연 알고리즘 보정식
-        let lunarYear = year, lunarMonth = month, lunarDay = day;
-        if (day > 28) lunarDay = day - 15;
-        else lunarDay = Math.max(1, day - 10);
-        return { year: lunarYear, month: lunarMonth, day: lunarDay, isLeap: false };
+        let lunarDay = day > 28 ? day - 14 : Math.max(1, day - 10);
+        return { month: month, day: lunarDay };
     }
 
-    // 24절기 산출 알고리즘 (태양 황경 각도 계산)
-    function getSolarTerm(year, month, day) {
-        // 매월 들어오는 절기 근사 계산 (천문 연산식 적용)
-        const termDates = {
-            1: { 6: "소한", 20: "대한" }, 2: { 4: "입춘", 19: "우수" },
-            3: { 6: "경칩", 21: "춘분" }, 4: { 5: "청명", 20: "곡우" },
-            5: { 5: "입하", 21: "소만" }, 6: { 6: "망종", 21: "하지" },
-            7: { 7: "작서", 23: "대서" }, 8: { 7: "입추", 23: "처서" },
-            9: { 7: "백로", 23: "추분" }, 10: { 8: "한로", 23: "상강" },
-            11: { 7: "입동", 22: "소설" }, 12: { 7: "대설", 22: "동지" }
+    function getSolarTerm(month, day) {
+        const terms = {
+            1: {6:"소한", 20:"대한"}, 2: {4:"입춘", 19:"우수"},
+            3: {6:"경칩", 21:"춘분"}, 4: {5:"청명", 20:"곡우"},
+            5: {5:"입하", 21:"소만"}, 6: {6:"망종", 21:"하지"},
+            7: {7:"서상", 23:"대서"}, 8: {7:"입추", 23:"처서"},
+            9: {7:"백로", 23:"추분"}, 10: {8:"한로", 23:"상강"},
+            11: {7:"입동", 22:"소설"}, 12: {7:"대설", 22:"동지"}
         };
-        return termDates[month]?.[day] || null;
+        return terms[month]?.[day] || null;
     }
 
-    // 삼복(초복, 중복, 말복) 계산
-    function getThreeDogDays(year, month, day) {
-        // 하지(6/21경) 후 3경/4경, 입추(8/7경) 후 1경 계산 알고리즘
+    function getThreeDogDays(month, day) {
         if (month === 7 && day === 12) return "초복";
         if (month === 7 && day === 22) return "중복";
         if (month === 8 && day === 11) return "말복";
         return null;
     }
 
-    // 공휴일 & 대체휴일 판단
     function getHolidayInfo(year, month, day, dayOfWeek) {
-        // 고정 공휴일
-        const fixedHolidays = {
-            "1-1": "신정", "3-1": "삼일절", "5-5": "어린이날", "6-6": "현충일",
-            "8-15": "광복절", "10-3": "개천절", "10-9": "한글날", "12-25": "성탄절"
+        const fixed = {
+            "1-1":"신정", "3-1":"삼일절", "5-5":"어린이날", "6-6":"현충일",
+            "8-15":"광복절", "10-3":"개천절", "10-9":"한글날", "12-25":"성탄절"
         };
         let key = `${month}-${day}`;
-        if (fixedHolidays[key]) return { isHoliday: true, name: fixedHolidays[key] };
+        if (fixed[key]) return { isHoliday: true, name: fixed[key] };
 
-        // 구정(설날 연휴예시: 음력 1월 1일 전후) & 추석(음력 8월 15일 전후)
         const lunar = getLunarDate(year, month, day);
         if (lunar.month === 1 && (lunar.day === 1 || lunar.day === 2)) return { isHoliday: true, name: "설날 연휴" };
         if (lunar.month === 8 && (lunar.day >= 14 && lunar.day <= 16)) return { isHoliday: true, name: "추석 연휴" };
 
-        // 대체 공휴일 계산 (일요일과 겹치는 고정 공휴일)
-        if (dayOfWeek === 1) { // 월요일
-            let prevKey = `${month}-${day-1}`;
-            if (fixedHolidays[prevKey]) return { isHoliday: true, name: "대체공휴일" };
+        if (dayOfWeek === 1 && fixed[`${month}-${day-1}`]) {
+            return { isHoliday: true, name: "대체공휴일" };
         }
-
         return { isHoliday: false, name: "" };
     }
 
-    // --- 2. 앱 상태 및 이벤트 관리 ---
+    // 데이터 관리
     let currentDate = new Date();
     let selectedCellDate = null;
     let events = JSON.parse(localStorage.getItem('calendar_events') || '{}');
 
-    // 로그인
-    function login() {
-        const u = document.getElementById('username').value;
-        if(u) {
-            document.getElementById('loginModal').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
-            renderCalendar();
-        } else {
-            alert('아이디를 입력해주세요.');
-        }
-    }
-
-    function logout() {
-        document.getElementById('mainContent').style.display = 'none';
-        document.getElementById('loginModal').style.display = 'flex';
-    }
-
-    // 타이틀 및 배경 변경
     function changeCalendarTitle() {
         const newTitle = prompt("달력 이름을 입력하세요:", document.getElementById('displayCalendarTitle').innerText);
         if(newTitle) {
@@ -330,13 +268,11 @@
         }
     }
 
-    // 달력 이동
     function moveMonth(delta) {
         currentDate.setMonth(currentDate.getMonth() + delta);
         renderCalendar();
     }
 
-    // 달력 렌더링
     function renderCalendar() {
         const grid = document.getElementById('calendarGrid');
         grid.innerHTML = '';
@@ -345,7 +281,6 @@
         const month = currentDate.getMonth() + 1;
         document.getElementById('currentYearMonth').innerText = `${year}년 ${month}월`;
 
-        // 요일 헤더
         const days = ['일', '월', '화', '수', '목', '금', '토'];
         days.forEach((d, idx) => {
             const h = document.createElement('div');
@@ -357,29 +292,25 @@
         const firstDay = new Date(year, month - 1, 1).getDay();
         const lastDate = new Date(year, month, 0).getDate();
 
-        // 빈 칸 셀
         for(let i=0; i<firstDay; i++){
             const empty = document.createElement('div');
             empty.className = 'day-cell';
-            empty.style.background = '#f9f9f9';
+            empty.style.background = '#f8f8f8';
             grid.appendChild(empty);
         }
 
-        // 날짜 셀 생성
         for(let d=1; d<=lastDate; d++){
             const cell = document.createElement('div');
             cell.className = 'day-cell';
             const dayOfWeek = new Date(year, month - 1, d).getDay();
 
-            // 날짜 클래스 설정
             let numClass = 'date-number';
             if(dayOfWeek === 0) numClass += ' sun';
             if(dayOfWeek === 6) numClass += ' sat';
 
-            // 절기, 삼복, 음력, 공휴일
             const lunar = getLunarDate(year, month, d);
-            const solarTerm = getSolarTerm(year, month, d);
-            const dogDay = getThreeDogDays(year, month, d);
+            const solarTerm = getSolarTerm(month, d);
+            const dogDay = getThreeDogDays(month, d);
             const holiday = getHolidayInfo(year, month, d, dayOfWeek);
 
             if(holiday.isHoliday) numClass += ' holiday';
@@ -392,7 +323,6 @@
 
             cell.innerHTML = cellHTML;
 
-            // 일정 렌더링 및 무제한 반복 처리
             const dateKey = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             const activeEvents = getEventsForDate(year, month, d);
             
@@ -413,23 +343,19 @@
         }
     }
 
-    // 일정 계산 함수 (매월/매년/양력/음력 반복 지원)
     function getEventsForDate(y, m, d) {
         let result = [];
         const dateKey = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 
-        // 직접등록 일정
         if(events[dateKey]) result.push(...events[dateKey]);
 
-        // 반복 일정검색
         Object.keys(events).forEach(k => {
             events[k].forEach(ev => {
-                if(ev.repeat === 'yearly') {
-                    const [ey, em, ed] = k.split('-').map(Number);
-                    if(em === m && ed === d && k !== dateKey) result.push(ev);
-                } else if(ev.repeat === 'monthly') {
-                    const [ey, em, ed] = k.split('-').map(Number);
-                    if(ed === d && k !== dateKey) result.push(ev);
+                const [ey, em, ed] = k.split('-').map(Number);
+                if(ev.repeat === 'yearly' && em === m && ed === d && k !== dateKey) {
+                    result.push(ev);
+                } else if(ev.repeat === 'monthly' && ed === d && k !== dateKey) {
+                    result.push(ev);
                 }
             });
         });
@@ -437,7 +363,6 @@
         return result;
     }
 
-    // 모달 및 등록
     function openEventModal(dateKey) {
         selectedCellDate = dateKey;
         document.getElementById('eventModal').style.display = 'flex';
@@ -449,7 +374,7 @@
 
     function saveEvent() {
         const title = document.getElementById('eventTitle').value;
-        if(!title) return alert('제목을 입력하세요');
+        if(!title) return alert('일정 제목을 입력해주세요.');
 
         const newEvent = {
             title,
@@ -465,13 +390,14 @@
         events[selectedCellDate].push(newEvent);
 
         localStorage.setItem('calendar_events', JSON.stringify(events));
+        document.getElementById('eventTitle').value = '';
         closeModal();
         renderCalendar();
     }
 
     function deleteEvent(e, dateKey, index) {
         e.stopPropagation();
-        if(confirm('이 일정을 삭제하시겠습니까?')) {
+        if(confirm('해당 일정을 삭제하시겠습니까?')) {
             events[dateKey].splice(index, 1);
             if(events[dateKey].length === 0) delete events[dateKey];
             localStorage.setItem('calendar_events', JSON.stringify(events));
@@ -479,13 +405,14 @@
         }
     }
 
-    // 로드 시 초기화 설정
     window.onload = function() {
         const savedTitle = localStorage.getItem('calendar_title');
         if(savedTitle) document.getElementById('displayCalendarTitle').innerText = savedTitle;
 
         const savedBg = localStorage.getItem('calendar_bg');
         if(savedBg) document.body.style.backgroundImage = `url(${savedBg})`;
+
+        renderCalendar();
     }
 </script>
 </body>
