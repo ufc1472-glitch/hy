@@ -32,7 +32,7 @@
     .day-header.sun { color: #e53e3e; }
     .day-header.sat { color: #3182ce; }
     
-    .date-cell { min-height: 80px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px; background: white; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-start; text-align: left; overflow: hidden; }
+    .date-cell { min-height: 85px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px; background: white; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-start; text-align: left; overflow: hidden; }
     .date-cell:hover { background: #ebf8ff; }
 
     .date-header-row { display: flex; align-items: baseline; justify-content: flex-start; gap: 3px; }
@@ -97,61 +97,74 @@
   let currentUser = null;
   let userEvents = {};
 
-  // 주요 공휴일 및 절기 정보
-  const fixedInfo = {
-    // 2026년
-    "2026-01-01": { holiday: "신정" },
-    "2026-02-16": { holiday: "설날 연휴" }, "2026-02-17": { holiday: "설날" }, "2026-02-18": { holiday: "설날 연휴" },
-    "2026-03-01": { holiday: "삼일절" }, "2026-03-02": { holiday: "대체공휴일" },
-    "2026-05-05": { holiday: "어린이날", term: "입하" },
-    "2026-05-24": { holiday: "부처님오신날" }, "2026-05-25": { holiday: "대체공휴일" },
-    "2026-06-06": { holiday: "현충일" },
-    "2026-08-15": { holiday: "광복절" },
-    "2026-09-24": { holiday: "추석 연휴" }, "2026-09-25": { holiday: "추석" }, "2026-09-26": { holiday: "추석 연휴" },
-    "2026-10-03": { holiday: "개천절" }, "2026-10-09": { holiday: "한글날" },
-    "2026-12-25": { holiday: "성탄절" },
-
-    // 2027년
-    "2027-01-01": { holiday: "신정" },
-    "2027-02-06": { holiday: "설날 연휴" }, "2027-02-07": { holiday: "설날" }, "2027-02-08": { holiday: "설날 연휴" }, "2027-02-09": { holiday: "대체공휴일" },
-    "2027-03-01": { holiday: "삼일절" },
-    "2027-05-05": { holiday: "어린이날" }, "2027-05-13": { holiday: "부처님오신날" },
-    "2027-06-06": { holiday: "현충일" }, "2027-06-07": { holiday: "대체공휴일" },
-    "2027-08-15": { holiday: "광복절" }, "2027-08-16": { holiday: "대체공휴일" },
-    "2027-09-14": { holiday: "추석 연휴" }, "2027-09-15": { holiday: "추석" }, "2027-09-16": { holiday: "추석 연휴" },
-    "2027-10-03": { holiday: "개천절" }, "2027-10-04": { holiday: "대체공휴일" }, "2027-10-09": { holiday: "한글날" },
-    "2027-12-25": { holiday: "성탄절" }
+  // 양력 고정 공휴일
+  const solarHolidays = {
+    "01-01": "신정",
+    "03-01": "삼일절",
+    "05-05": "어린이날",
+    "06-06": "현충일",
+    "08-15": "광복절",
+    "10-03": "개천절",
+    "10-09": "한글날",
+    "12-25": "성탄절"
   };
 
-  // 정확한 음력 계산 함수 (Intl 사용)
-  function getExactLunarDate(dateObj) {
+  // 정확한 음력 계산 알고리즘
+  function getExactLunarData(dateObj) {
     try {
       const formatter = new Intl.DateTimeFormat('ko-KR-u-ca-chinese', {
         month: 'numeric',
         day: 'numeric'
       });
       const parts = formatter.formatToParts(dateObj);
-      let month = '', day = '';
+      let month = 0, day = 0;
       for (const part of parts) {
-        if (part.type === 'month') month = part.value.replace('월', '').trim();
-        if (part.type === 'day') day = part.value.replace('일', '').trim();
+        if (part.type === 'month') month = parseInt(part.value.replace('월', '').trim());
+        if (part.type === 'day') day = parseInt(part.value.replace('일', '').trim());
       }
-      return `${month}.${day}`;
+      return { month, day, text: `${month}.${day}` };
     } catch (e) {
-      return '';
+      return { month: 0, day: 0, text: '' };
     }
+  }
+
+  // 천문학적 24절기 연산 근사식
+  function getSolarTerm(year, month, day) {
+    const terms = ["소한","대한","입춘","우수","경칩","춘분","청명","곡우","입하","소만","망종","하지","소서","대서","입추","처서","백로","추분","한로","상강","입동","소설","대설","동지"];
+    const stDates = [
+      [1, 5, 20], [2, 4, 19], [3, 6, 21], [4, 5, 20],
+      [5, 5, 21], [6, 6, 21], [7, 7, 23], [8, 7, 23],
+      [9, 7, 23], [10, 8, 23], [11, 7, 22], [12, 7, 22]
+    ];
+    const mIdx = month - 1;
+    if (day === stDates[mIdx][1]) return terms[mIdx * 2];
+    if (day === stDates[mIdx][2]) return terms[mIdx * 2 + 1];
+    return null;
+  }
+
+  // 삼복(초복, 중복, 말복) 연산
+  function getSamBok(year, month, day) {
+    // 2026~2028년 복날 근사 기준
+    const bokTable = {
+      2026: { cho: "07-15", jung: "07-25", mal: "08-14" },
+      2027: { cho: "07-16", jung: "07-26", mal: "08-15" },
+      2028: { cho: "07-15", jung: "07-25", mal: "08-13" }
+    };
+    const key = `${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    if (bokTable[year]) {
+      if (key === bokTable[year].cho) return "초복";
+      if (key === bokTable[year].jung) return "중복";
+      if (key === bokTable[year].mal) return "말복";
+    }
+    return null;
   }
 
   function handleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(error => {
-      alert("로그인 오류: " + error.message);
-    });
+    auth.signInWithPopup(provider).catch(error => { alert("로그인 오류: " + error.message); });
   }
 
-  function handleLogout() {
-    auth.signOut();
-  }
+  function handleLogout() { auth.signOut(); }
 
   auth.onAuthStateChanged(user => {
     currentUser = user;
@@ -198,30 +211,49 @@
     for (let date = 1; date <= lastDate; date++) {
       const cell = document.createElement("div");
       const dayOfWeek = (firstDay + date - 1) % 7;
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+      const mm = String(month + 1).padStart(2, '0');
+      const dd = String(date).padStart(2, '0');
+      const dateStr = `${year}-${mm}-${dd}`;
+      const mdKey = `${mm}-${dd}`;
       
       let dayClass = "date-cell";
       if (dayOfWeek === 0) dayClass += " sun";
       if (dayOfWeek === 6) dayClass += " sat";
 
-      const info = fixedInfo[dateStr] || {};
-      if (info.holiday) dayClass += " holiday";
+      // 음력 연산
+      const targetDate = new Date(year, month, date);
+      const lunar = getExactLunarData(targetDate);
+
+      // 공휴일 판별 (양력/음력 명절)
+      let holidayName = solarHolidays[mdKey] || null;
+
+      // 음력 명절 자동 체크
+      if (lunar.month === 1 && lunar.day === 1) holidayName = "설날";
+      if (lunar.month === 12 && lunar.day >= 29) holidayName = "설날 연휴"; // 음력 섣달그믐
+      if (lunar.month === 1 && lunar.day === 2) holidayName = "설날 연휴";
+      if (lunar.month === 4 && lunar.day === 8) holidayName = "부처님오신날";
+      if (lunar.month === 8 && lunar.day === 14) holidayName = "추석 연휴";
+      if (lunar.month === 8 && lunar.day === 15) holidayName = "추석";
+      if (lunar.month === 8 && lunar.day === 16) holidayName = "추석 연휴";
+
+      if (holidayName) dayClass += " holiday";
 
       cell.className = dayClass;
 
-      // 정확한 음력 계산 적용
-      const targetDate = new Date(year, month, date);
-      const lunarStr = `(${getExactLunarDate(targetDate)})`;
+      // 절기 및 복날 체크
+      const termName = getSolarTerm(year, month + 1, date);
+      const bokName = getSamBok(year, month + 1, date);
 
       let extraHtml = "";
-      if (info.holiday) extraHtml += `<div class="holiday-tag">🔴 ${info.holiday}</div>`;
-      if (info.term) extraHtml += `<div class="solar-term">🥬 ${info.term}</div>`;
+      if (holidayName) extraHtml += `<div class="holiday-tag">🔴 ${holidayName}</div>`;
+      if (termName) extraHtml += `<div class="solar-term">🥬 ${termName}</div>`;
+      if (bokName) extraHtml += `<div class="solar-term">🍗 ${bokName}</div>`;
       if (userEvents[dateStr]) extraHtml += `<div class="event-item">📌 ${userEvents[dateStr]}</div>`;
 
       cell.innerHTML = `
         <div class="date-header-row">
           <span class="date-num">${date}</span>
-          <span class="lunar-text">${lunarStr}</span>
+          <span class="lunar-text">(${lunar.text})</span>
         </div>
         ${extraHtml}
       `;
