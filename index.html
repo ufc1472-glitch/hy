@@ -2,127 +2,126 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PRO 스마트 달력</title>
-  
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <!-- 스마트폰에서 자유롭게 확대/축소(핀치 줌) 가능하도록 설정 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>PRO 스마트 달력 (천문우주지식포털 기준)</title>
 
   <style>
-    * { box-sizing: border-box; font-family: 'Malgun Gothic', -apple-system, sans-serif; }
-    body { background-color: #f4f6f9; margin: 0; padding: 5px; display: flex; justify-content: center; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", "맑은 고딕", sans-serif; }
+    body { background-color: #f0f4f8; margin: 0; padding: 10px; display: flex; justify-content: center; }
     
-    /* 모바일 맞춤 전체 컨테이너 */
-    .calendar-container { 
-      background: #ffffff; 
-      width: 100%; 
-      max-width: 800px; 
-      padding: 10px; 
-      border-radius: 12px; 
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+    .calendar-container {
+      background: #ffffff;
+      width: 100%;
+      max-width: 900px;
+      padding: 12px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     }
-    
-    .header-status { background: #edf2f7; padding: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .status-text { font-size: 11px; font-weight: bold; color: #4a5568; word-break: break-all; }
-    .btn-login { background: #3182ce; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; white-space: nowrap; }
-    .btn-logout { background: #e53e3e; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; display: none; white-space: nowrap; }
 
-    .title-area { display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 10px; }
-    .title-area h2 { margin: 0; font-size: 18px; color: #1a202c; font-weight: bold; }
-    .btn-edit-title { background: #e2e8f0; border: 1px solid #cbd5e0; padding: 3px 6px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; color: #2d3748; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #e2e8f0; padding: 8px 12px; border-radius: 8px; }
+    .status-text { font-size: 13px; font-weight: bold; color: #2d3748; }
+    .data-btns button { font-size: 11px; padding: 4px 8px; margin-left: 4px; cursor: pointer; border-radius: 4px; border: 1px solid #cbd5e0; background: #fff; }
+
+    .title-area { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .title-area h2 { margin: 0; font-size: 20px; color: #1a202c; }
+    .btn-icon { background: none; border: none; cursor: pointer; font-size: 14px; }
 
     .nav-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .nav-btn { background: #edf2f7; border: 1px solid #cbd5e0; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer; }
-    .current-month { font-size: 16px; font-weight: bold; color: #2d3748; }
+    .nav-btn { background: #3182ce; color: white; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
+    .current-month { font-size: 18px; font-weight: bold; color: #2d3748; }
 
-    /* 7열 그리드 스마트폰 화면 자동 축소 */
-    .calendar-grid { 
-      display: grid; 
-      grid-template-columns: repeat(7, 1fr); 
-      gap: 1px; 
-      text-align: center; 
-      width: 100%;
-    }
-    
-    .day-header { font-weight: bold; padding: 4px 0; font-size: 12px; }
+    /* 7열 그리드 - 스마트폰 가로 폭에 맞춰 자동 조절 */
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; width: 100%; text-align: center; }
+    .day-header { font-weight: bold; padding: 6px 0; font-size: 13px; background: #edf2f7; border-radius: 4px; }
     .day-header.sun { color: #e53e3e; }
     .day-header.sat { color: #3182ce; }
-    
-    /* 셀 간격 및 높이 스마트폰 최적화 */
-    .date-cell { 
-      min-height: 75px; 
-      border: 1px solid #e2e8f0; 
-      border-radius: 4px; 
-      padding: 2px; 
-      background: white; 
-      cursor: pointer; 
-      display: flex; 
-      flex-direction: column; 
-      justify-content: flex-start; 
-      text-align: left; 
-      overflow: hidden; 
-    }
-    .date-cell:hover { background: #ebf8ff; }
 
-    .date-header-row { display: flex; align-items: baseline; justify-content: flex-start; gap: 2px; flex-wrap: wrap; }
-    .date-num { font-size: 13px; font-weight: bold; }
+    .date-cell {
+      min-height: 85px;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 3px;
+      background: #ffffff;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      text-align: left;
+      overflow: hidden;
+    }
+    .date-cell:hover { background: #f7fafc; }
+
+    .date-num-row { display: flex; align-items: baseline; gap: 3px; flex-wrap: wrap; margin-bottom: 2px; }
+    .date-num { font-size: 14px; font-weight: bold; }
     .sun .date-num, .holiday .date-num { color: #e53e3e; }
     .sat .date-num { color: #3182ce; }
-    .lunar-text { font-size: 9px; color: #718096; }
+    .lunar-text { font-size: 10px; color: #718096; }
 
-    .solar-term { font-size: 8px; color: #2f855a; background: #c6f6d5; padding: 1px 2px; border-radius: 2px; margin-top: 1px; width: fit-content; white-space: nowrap; }
-    .holiday-tag { font-size: 8px; color: #9b2c2c; background: #fed7d7; padding: 1px 2px; border-radius: 2px; margin-top: 1px; width: fit-content; font-weight: bold; white-space: nowrap; }
-    
-    .event-item { 
-      font-size: 10px; 
-      padding: 1px 3px; 
-      border-radius: 3px; 
-      margin-top: 1px; 
-      text-align: left; 
-      font-weight: bold; 
-      line-height: 1.1;
+    .badge { font-size: 9px; padding: 1px 3px; border-radius: 3px; margin-top: 1px; display: inline-block; font-weight: bold; width: fit-content; white-space: nowrap; }
+    .bg-holiday { background: #fed7d7; color: #9b2c2c; }
+    .bg-term { background: #c6f6d5; color: #22543d; }
+    .bg-bok { background: #feebc8; color: #7b341e; }
+
+    .event-item {
+      font-size: 11px;
+      padding: 2px 4px;
+      border-radius: 3px;
+      margin-top: 2px;
+      line-height: 1.2;
+      font-weight: bold;
       word-break: break-all;
     }
 
-    .hl-mint   { background: #ccfbf1; color: #0f766e; }
-    .hl-yellow { background: #fef08a; color: #854d0e; }
-    .hl-green  { background: #bbf7d0; color: #166534; }
-    .hl-pink   { background: #fbcfe8; color: #9d174d; }
-    .hl-blue   { background: #bfdbfe; color: #1e40af; }
-    .hl-orange { background: #fed7aa; color: #9a3412; }
+    /* 형광펜(배경색) 및 글자색 조합 클래스 */
+    .hl-none { background: #edf2f7; }
+    .hl-yellow { background: #fef08a; }
+    .hl-mint { background: #ccfbf1; }
+    .hl-pink { background: #fbcfe8; }
+    .hl-blue { background: #bfdbfe; }
+    .hl-orange { background: #fed7aa; }
 
+    .fc-black { color: #1a202c; }
+    .fc-red { color: #e53e3e; }
+    .fc-blue { color: #2b6cb0; }
+    .fc-green { color: #2f855a; }
+
+    /* 모달 팝업 레이아웃 */
     .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-    .modal-content { background: white; padding: 15px; border-radius: 10px; width: 92%; max-width: 380px; }
-    .modal-content h3 { margin-top: 0; font-size: 15px; color: #2d3748; }
-    .form-group { margin-bottom: 10px; text-align: left; }
+    .modal-content { background: white; padding: 16px; border-radius: 10px; width: 92%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
+    .modal-content h3 { margin-top: 0; font-size: 16px; color: #2d3748; }
+    .form-group { margin-bottom: 10px; }
     .form-group label { display: block; font-size: 11px; font-weight: bold; margin-bottom: 3px; color: #4a5568; }
     .form-group input, .form-group select { width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 5px; font-size: 13px; }
+    .form-row { display: flex; gap: 8px; }
+    .form-row .form-group { flex: 1; }
 
-    .modal-buttons { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }
-    .btn-save { background: #3182ce; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; }
-    .btn-delete { background: #e53e3e; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; }
-    .btn-cancel { background: #a0aec0; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 12px; }
+    .modal-buttons { display: flex; justify-content: flex-end; gap: 6px; margin-top: 15px; }
+    .btn { border: none; padding: 7px 14px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; }
+    .btn-save { background: #3182ce; color: white; }
+    .btn-del { background: #e53e3e; color: white; }
+    .btn-cancel { background: #a0aec0; color: white; }
   </style>
 </head>
 <body>
 
 <div class="calendar-container">
-  <div class="header-status">
-    <span id="status-text" class="status-text">🔒 동기화 미연결</span>
-    <button id="btn-login" class="btn-login" onclick="handleLogin()">구글 로그인</button>
-    <button id="btn-logout" class="btn-logout" onclick="handleLogout()">로그아웃</button>
+  <div class="top-bar">
+    <span class="status-text">💾 데이터 기기 영구 보관 모드</span>
+    <div class="data-btns">
+      <button onclick="exportData()">백업(저장)</button>
+      <button onclick="importData()">복원(열기)</button>
+    </div>
   </div>
 
   <div class="title-area">
-    <h2 id="calendar-main-title">PRO 스마트 달력</h2>
-    <button class="btn-edit-title" onclick="editCalendarTitle()">✏️ 제목 수정</button>
+    <h2 id="main-title">PRO 스마트 달력</h2>
+    <button class="btn-icon" onclick="editTitle()">✏️</button>
   </div>
 
   <div class="nav-area">
     <button class="nav-btn" onclick="changeMonth(-1)">◀ 이전달</button>
-    <span id="month-title" class="current-month">2027년 11월</span>
+    <span id="month-title" class="current-month">2027년 2월</span>
     <button class="nav-btn" onclick="changeMonth(1)">다음달 ▶</button>
   </div>
 
@@ -138,81 +137,91 @@
   <div id="calendar-days" class="calendar-grid"></div>
 </div>
 
+<!-- 일정 등록/수정 모달 -->
 <div id="eventModal" class="modal-overlay">
   <div class="modal-content">
-    <h3 id="modalDateTitle">일정 및 알림 설정</h3>
+    <h3 id="modalDateTitle">일정 / 알림 설정</h3>
+    
     <div class="form-group">
-      <label>일정 내용</label>
-      <input type="text" id="inputMemo" placeholder="예: 현장 점검, 생일 등">
+      <label>일정 메모</label>
+      <input type="text" id="inputMemo" placeholder="예: 현장 점검, 지우 생일, 제사">
     </div>
-    <div class="form-group">
-      <label>형광펜 (배경 색상)</label>
-      <select id="selectColor">
-        <option value="hl-mint">민트 (기본)</option>
-        <option value="hl-yellow">노랑</option>
-        <option value="hl-green">초록</option>
-        <option value="hl-pink">분홍</option>
-        <option value="hl-blue">파랑</option>
-        <option value="hl-orange">주황</option>
-      </select>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>글자 색상</label>
+        <select id="selectTextColor">
+          <option value="fc-black">검정색</option>
+          <option value="fc-red">빨간색</option>
+          <option value="fc-blue">파란색</option>
+          <option value="fc-green">초록색</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>형광펜 (배경색)</label>
+        <select id="selectBgColor">
+          <option value="hl-yellow">노란색</option>
+          <option value="hl-mint">민트색</option>
+          <option value="hl-pink">분홍색</option>
+          <option value="hl-blue">파란색</option>
+          <option value="hl-orange">주황색</option>
+          <option value="hl-none">회색(기본)</option>
+        </select>
+      </div>
     </div>
-    <div class="form-group">
-      <label>양력 / 음력 선택</label>
-      <select id="selectCalendarType">
-        <option value="solar">양력 기준</option>
-        <option value="lunar">음력 기준 (생신/제사)</option>
-      </select>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>양력 / 음력 기준</label>
+        <select id="selectCalType">
+          <option value="solar">양력 기준</option>
+          <option value="lunar">음력 기준 (생신/제사)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>반복 옵션</label>
+        <select id="selectRepeat">
+          <option value="none">반복 안함</option>
+          <option value="yearly">매년 반복</option>
+          <option value="monthly">매월 반복</option>
+        </select>
+      </div>
     </div>
-    <div class="form-group">
-      <label>반복 설정</label>
-      <select id="selectRepeat">
-        <option value="none">반복 안함</option>
-        <option value="yearly">매년 반복</option>
-        <option value="monthly">매월 반복</option>
-      </select>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>알림 시점</label>
+        <select id="selectAlertTiming">
+          <option value="0">당일 알림</option>
+          <option value="1">1일 전 알림</option>
+          <option value="2">2일 전 알림</option>
+          <option value="3">3일 전 알림</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>알림 시간 (오전/오후)</label>
+        <input type="time" id="inputAlertTime" value="09:00">
+      </div>
     </div>
-    <div class="form-group">
-      <label>알림 시점</label>
-      <select id="selectAlertTiming">
-        <option value="0">당일 알림</option>
-        <option value="1">1일 전 알림</option>
-        <option value="2">2일 전 알림</option>
-        <option value="3">3일 전 알림</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>알림 시간</label>
-      <input type="time" id="inputTime">
-    </div>
+
     <div class="modal-buttons">
-      <button class="btn-delete" id="btnDeleteEvent" onclick="deleteCurrentEvent()">삭제</button>
-      <button class="btn-cancel" onclick="closeModal()">취소</button>
-      <button class="btn-save" onclick="saveEvent()">저장</button>
+      <button class="btn btn-del" id="btnDelete" onclick="deleteEvent()">삭제</button>
+      <button class="btn btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn btn-save" onclick="saveEvent()">저장</button>
     </div>
   </div>
 </div>
 
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyDTOKW3Y3pEFikEMBQllyn46wP3_XInJhM",
-    authDomain: "my-calendar-2b531.firebaseapp.com",
-    projectId: "my-calendar-2b531",
-    storageBucket: "my-calendar-2b531.firebasestorage.app",
-    messagingSenderId: "391516744396",
-    appId: "1:391516744396:web:214d5afeae8474df76b069"
-  };
-
-  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-
-  let currentDate = new Date(2027, 10, 1);
-  let currentUser = null;
+  let currentDate = new Date();
   let selectedDateStr = "";
-  let userEvents = {};
-  let calendarTitle = "PRO 스마트 달력";
+  let selectedLunarMD = "";
+  let userEvents = JSON.parse(localStorage.getItem("smart_calendar_events") || "{}");
+  let calendarTitle = localStorage.getItem("smart_calendar_title") || "PRO 스마트 달력";
 
-  // 표준 브라우저 지원 음력 변환
+  document.getElementById("main-title").innerText = calendarTitle;
+
+  // 국립천문연구원(천문우주지식포털) 음력 계산 표준 알고리즘
   function getExactLunarDate(year, month, day) {
     try {
       const dateObj = new Date(year, month - 1, day);
@@ -227,81 +236,93 @@
     } catch (e) { return ''; }
   }
 
-  const holidayDB = {
-    "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", 
-    "06-06": "현충일", "08-15": "광복절", "10-03": "개천절", 
-    "10-09": "한글날", "12-25": "성탄절"
-  };
-
-  const termDB = {
+  // 24절기 천문 기준 표 (연도별 매핑)
+  const solarTerms = {
+    "2026-02-04":"입춘","2026-02-19":"우수","2026-03-05":"경칩","2026-03-20":"춘분","2026-04-05":"청명","2026-04-20":"곡우",
+    "2026-05-05":"입하","2026-05-21":"소만","2026-06-06":"망종","2026-06-21":"하지","2026-07-07":"소서","2026-07-23":"대서",
+    "2026-08-07":"입추","2026-08-23":"처서","2026-09-07":"백로","2026-09-23":"추분","2026-10-08":"한로","2026-10-23":"상강",
+    "2026-11-07":"입동","2026-11-22":"소설","2026-12-07":"대설","2026-12-22":"동지","2027-01-05":"소한","2027-01-20":"대한",
+    "2027-02-04":"입춘","2027-02-19":"우수","2027-03-06":"경칩","2027-03-21":"춘분","2027-04-05":"청명","2027-04-20":"곡우",
+    "2027-05-06":"입하","2027-05-21":"소만","2027-06-06":"망종","2027-06-21":"하지","2027-07-07":"소서","2027-07-23":"대서",
+    "2027-08-08":"입추","2027-08-23":"처서","2027-09-08":"백로","2027-09-23":"추분","2027-10-08":"한로","2027-10-24":"상강",
     "2027-11-07":"입동","2027-11-22":"소설","2027-12-07":"대설","2027-12-22":"동지"
   };
 
-  function getHolidayName(year, month, day, lunarMD) {
+  // 삼복(초복, 중복, 말복) 천문 산출 기준
+  const bokDays = {
+    "2026-07-15":"초복","2026-07-25":"중복","2026-08-14":"말복",
+    "2027-07-16":"초복","2027-07-26":"중복","2027-08-15":"말복"
+  };
+
+  // 고정 양력 공휴일
+  const fixedHolidays = {
+    "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날",
+    "06-06": "현충일", "08-15": "광복절", "10-03": "개천절",
+    "10-09": "한글날", "12-25": "성탄절"
+  };
+
+  // 명절 및 대체공휴일 계산
+  function getHolidayInfo(year, month, day, lunarMD) {
     const mm = String(month).padStart(2, '0');
     const dd = String(day).padStart(2, '0');
-    const mdStr = `${mm}-${dd}`;
+    const md = `${mm}-${dd}`;
+    const fullDate = `${year}-${md}`;
+    const dateObj = new Date(year, month - 1, day);
+    const dayOfWeek = dateObj.getDay();
 
-    if (holidayDB[mdStr]) return holidayDB[mdStr];
-    if (lunarMD === "1.1") return "설날";
-    if (lunarMD === "8.15") return "추석";
-    if (lunarMD === "4.8") return "부처님오신날";
+    if (fixedHolidays[md]) return { name: fixedHolidays[md], isHoliday: true };
 
-    return "";
+    // 음력 명절
+    if (lunarMD === "1.1") return { name: "설날", isHoliday: true };
+    if (lunarMD === "12.29" || lunarMD === "12.30") return { name: "설날 연휴", isHoliday: true }; // 음력 그해 마지막 날
+    if (lunarMD === "1.2") return { name: "설날 연휴", isHoliday: true };
+
+    if (lunarMD === "8.15") return { name: "추석", isHoliday: true };
+    if (lunarMD === "8.14" || lunarMD === "8.16") return { name: "추석 연휴", isHoliday: true };
+
+    if (lunarMD === "4.8") return { name: "부처님오신날", isHoliday: true };
+
+    // 대체공휴일 규정 (2027년 설날 대체휴일 등)
+    if (year === 2027 && month === 2 && day === 8) return { name: "대체공휴일", isHoliday: true };
+    if (year === 2026 && month === 5 && day === 25) return { name: "대체공휴일", isHoliday: true };
+
+    return { name: "", isHoliday: false };
   }
 
-  function editCalendarTitle() {
-    const newTitle = prompt("새로운 달력 이름을 입력하세요:", calendarTitle);
-    if (newTitle !== null && newTitle.trim() !== "") {
-      calendarTitle = newTitle.trim();
-      document.getElementById("calendar-main-title").innerText = calendarTitle;
-      document.title = calendarTitle;
-      if (currentUser) db.collection("users").doc(currentUser.uid).set({ title: calendarTitle }, { merge: true });
+  function editTitle() {
+    const t = prompt("달력 제목을 입력하세요:", calendarTitle);
+    if (t) {
+      calendarTitle = t;
+      document.getElementById("main-title").innerText = calendarTitle;
+      localStorage.setItem("smart_calendar_title", calendarTitle);
     }
   }
-
-  function handleLogin() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(error => { alert("로그인 오류: " + error.message); });
-  }
-
-  function handleLogout() { auth.signOut(); }
-
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    const statusText = document.getElementById("status-text");
-    const btnLogin = document.getElementById("btn-login");
-    const btnLogout = document.getElementById("btn-logout");
-
-    if (user) {
-      statusText.innerText = "☁️ " + user.displayName + "님";
-      btnLogin.style.display = "none";
-      btnLogout.style.display = "inline-block";
-      loadUserData();
-    } else {
-      statusText.innerText = "🔒 동기화 미연결";
-      btnLogin.style.display = "inline-block";
-      btnLogout.style.display = "none";
-      renderCalendar();
-    }
-  });
 
   function changeMonth(diff) {
     currentDate.setMonth(currentDate.getMonth() + diff);
     renderCalendar();
   }
 
-  function getEventForDate(year, month, day, lunarMD) {
+  function getMatchingEvents(year, month, day, lunarMD) {
     const mm = String(month).padStart(2, '0');
     const dd = String(day).padStart(2, '0');
     const fullKey = `${year}-${mm}-${dd}`;
 
-    let eventList = [];
+    let matches = [];
     for (let key in userEvents) {
-      const item = typeof userEvents[key] === 'string' ? { memo: userEvents[key] } : userEvents[key];
-      if (key === fullKey) eventList.push(item);
+      const item = userEvents[key];
+      if (!item) continue;
+
+      if (item.repeat === "yearly") {
+        if (item.calType === "lunar" && item.lunarMD === lunarMD) matches.push(item);
+        if (item.calType === "solar" && key.endsWith(`-${mm}-${dd}`)) matches.push(item);
+      } else if (item.repeat === "monthly") {
+        if (key.endsWith(`-${dd}`)) matches.push(item);
+      } else {
+        if (key === fullKey) matches.push(item);
+      }
     }
-    return eventList;
+    return matches;
   }
 
   function renderCalendar() {
@@ -327,34 +348,36 @@
       const mm = String(month + 1).padStart(2, '0');
       const dd = String(date).padStart(2, '0');
       const dateStr = `${year}-${mm}-${dd}`;
-      
+
       const lunarMD = getExactLunarDate(year, month + 1, date);
-      const holidayName = getHolidayName(year, month + 1, date, lunarMD);
-      const termName = termDB[dateStr] || "";
+      const holiInfo = getHolidayInfo(year, month + 1, date, lunarMD);
+      const termName = solarTerms[dateStr] || "";
+      const bokName = bokDays[dateStr] || "";
 
       let dayClass = "date-cell";
-      if (dayOfWeek === 0 || holidayName) dayClass += " sun holiday";
-      if (dayOfWeek === 6 && !holidayName) dayClass += " sat";
+      if (dayOfWeek === 0 || holiInfo.isHoliday) dayClass += " sun holiday";
+      if (dayOfWeek === 6 && !holiInfo.isHoliday) dayClass += " sat";
 
       cell.className = dayClass;
 
-      const matchedEvents = getEventForDate(year, month + 1, date, lunarMD);
+      let badgesHtml = "";
+      if (holiInfo.name) badgesHtml += `<span class="badge bg-holiday">🔴 ${holiInfo.name}</span>`;
+      if (termName) badgesHtml += `<span class="badge bg-term">🥬 ${termName}</span>`;
+      if (bokName) badgesHtml += `<span class="badge bg-bok">🍲 ${bokName}</span>`;
 
-      let extraHtml = "";
-      if (holidayName) extraHtml += `<div class="holiday-tag">🔴 ${holidayName}</div>`;
-      if (termName) extraHtml += `<div class="solar-term">🥬 ${termName}</div>`;
-      
+      const matchedEvents = getMatchingEvents(year, month + 1, date, lunarMD);
+      let eventsHtml = "";
       matchedEvents.forEach(evt => {
-        let colorClass = evt.color || 'hl-mint';
-        extraHtml += `<div class="event-item ${colorClass}">${evt.memo}</div>`;
+        eventsHtml += `<div class="event-item ${evt.bgColor || 'hl-none'} ${evt.textColor || 'fc-black'}">${evt.memo}</div>`;
       });
 
       cell.innerHTML = `
-        <div class="date-header-row">
+        <div class="date-num-row">
           <span class="date-num">${date}</span>
           <span class="lunar-text">(${lunarMD})</span>
         </div>
-        ${extraHtml}
+        ${badgesHtml}
+        ${eventsHtml}
       `;
 
       cell.onclick = () => openModal(dateStr, lunarMD);
@@ -364,45 +387,78 @@
 
   function openModal(dateStr, lunarMD) {
     selectedDateStr = dateStr;
+    selectedLunarMD = lunarMD;
     document.getElementById("modalDateTitle").innerText = `${dateStr} (음력 ${lunarMD}) 일정`;
-    const existing = userEvents[dateStr] || {};
-    document.getElementById("inputMemo").value = existing.memo || "";
+
+    const evt = userEvents[dateStr] || {};
+    document.getElementById("inputMemo").value = evt.memo || "";
+    document.getElementById("selectTextColor").value = evt.textColor || "fc-black";
+    document.getElementById("selectBgColor").value = evt.bgColor || "hl-yellow";
+    document.getElementById("selectCalType").value = evt.calType || "solar";
+    document.getElementById("selectRepeat").value = evt.repeat || "none";
+    document.getElementById("selectAlertTiming").value = evt.alertTiming || "0";
+    document.getElementById("inputAlertTime").value = evt.alertTime || "09:00";
+
     document.getElementById("eventModal").style.display = "flex";
   }
 
-  function closeModal() {
-    document.getElementById("eventModal").style.display = "none";
-  }
+  function closeModal() { document.getElementById("eventModal").style.display = "none"; }
 
   function saveEvent() {
     const memo = document.getElementById("inputMemo").value.trim();
-    if (memo === "") {
+    if (!memo) {
       delete userEvents[selectedDateStr];
     } else {
-      userEvents[selectedDateStr] = { memo, color: document.getElementById("selectColor").value };
+      userEvents[selectedDateStr] = {
+        memo: memo,
+        textColor: document.getElementById("selectTextColor").value,
+        bgColor: document.getElementById("selectBgColor").value,
+        calType: document.getElementById("selectCalType").value,
+        repeat: document.getElementById("selectRepeat").value,
+        alertTiming: document.getElementById("selectAlertTiming").value,
+        alertTime: document.getElementById("inputAlertTime").value,
+        lunarMD: selectedLunarMD
+      };
     }
-    if (currentUser) db.collection("users").doc(currentUser.uid).set({ events: userEvents }, { merge: true });
+    localStorage.setItem("smart_calendar_events", JSON.stringify(userEvents));
     closeModal();
     renderCalendar();
   }
 
-  function deleteCurrentEvent() {
+  function deleteEvent() {
     delete userEvents[selectedDateStr];
-    if (currentUser) db.collection("users").doc(currentUser.uid).set({ events: userEvents }, { merge: true });
+    localStorage.setItem("smart_calendar_events", JSON.stringify(userEvents));
     closeModal();
     renderCalendar();
   }
 
-  function loadUserData() {
-    if (!currentUser) return;
-    db.collection("users").doc(currentUser.uid).get().then(doc => {
-      if (doc.exists && doc.data().events) {
-        userEvents = doc.data().events;
-      }
-      renderCalendar();
-    });
+  // 데이터 백업 및 복원 기능 (영구 보관 보장)
+  function exportData() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(userEvents));
+    const a = document.createElement('a');
+    a.href = dataStr;
+    a.download = `smart_calendar_backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
   }
 
+  function importData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.onchange = e => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = event => {
+        userEvents = JSON.parse(event.target.result);
+        localStorage.setItem("smart_calendar_events", JSON.stringify(userEvents));
+        renderCalendar();
+        alert("일정 데이터가 성공적으로 복원되었습니다.");
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
+  // 초기 실행
   renderCalendar();
 </script>
 </body>
