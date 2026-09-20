@@ -45,7 +45,6 @@
     .solar-term { font-size: 9px; color: #2f855a; background: #c6f6d5; padding: 1px 3px; border-radius: 3px; margin-top: 2px; width: fit-content; white-space: nowrap; }
     .holiday-tag { font-size: 9px; color: #9b2c2c; background: #fed7d7; padding: 1px 3px; border-radius: 3px; margin-top: 2px; width: fit-content; font-weight: bold; white-space: nowrap; }
     
-    /* 일정 아이템 - 기본 깔끔한 디자인 */
     .event-item { 
       font-size: 11px; 
       padding: 2px 4px; 
@@ -57,7 +56,6 @@
       word-break: break-all;
     }
 
-    /* 형광펜 색상 정의 */
     .hl-mint   { background: #ccfbf1; color: #0f766e; }
     .hl-yellow { background: #fef08a; color: #854d0e; }
     .hl-green  { background: #bbf7d0; color: #166534; }
@@ -65,17 +63,12 @@
     .hl-blue   { background: #bfdbfe; color: #1e40af; }
     .hl-orange { background: #fed7aa; color: #9a3412; }
 
-    /* 모달 레이아웃 */
     .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
     .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; }
     .modal-content h3 { margin-top: 0; color: #2d3748; }
     .form-group { margin-bottom: 12px; text-align: left; }
     .form-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #4a5568; }
     .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; }
-    
-    .color-options { display: flex; gap: 8px; margin-top: 4px; }
-    .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
-    .color-btn.selected { border-color: #2d3748; transform: scale(1.1); }
 
     .modal-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; }
     .btn-save { background: #3182ce; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
@@ -99,7 +92,7 @@
 
   <div class="nav-area">
     <button class="nav-btn" onclick="changeMonth(-1)">◀ 이전달</button>
-    <span id="month-title" class="current-month">2026년 10월</span>
+    <span id="month-title" class="current-month">2027년 1월</span>
     <button class="nav-btn" onclick="changeMonth(1)">다음달 ▶</button>
   </div>
 
@@ -115,7 +108,6 @@
   <div id="calendar-days" class="calendar-grid"></div>
 </div>
 
-<!-- 일정 등록 모달 -->
 <div id="eventModal" class="modal-overlay">
   <div class="modal-content">
     <h3 id="modalDateTitle">일정 및 알림 설정</h3>
@@ -184,25 +176,17 @@
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  let currentDate = new Date(2026, 9, 1);
+  let currentDate = new Date(2027, 0, 1);
   let currentUser = null;
   let selectedDateStr = "";
   
-  let userEvents = {
-    "2026-09-14": { memo: "서부본부 교육", calType: "solar", repeat: "none", timing: "0", time: "09:00", color: "hl-mint" },
-    "2026-09-18": { memo: "서부본부 교육", calType: "solar", repeat: "none", timing: "0", time: "14:00", color: "hl-mint" },
-    "2026-09-29": { memo: "경환 생일", calType: "solar", repeat: "yearly", timing: "0", time: "09:00", color: "hl-yellow" },
-    "2026-10-04": { memo: "집사람 탄신일", calType: "solar", repeat: "yearly", timing: "0", time: "09:00", color: "hl-pink" },
-    "2026-10-16": { memo: "장모님 생신", calType: "lunar", repeat: "yearly", timing: "1", time: "09:00", color: "hl-orange" },
-    "2026-10-25": { memo: "매부생일", calType: "solar", repeat: "yearly", timing: "0", time: "09:00", color: "hl-yellow" }
-  };
+  let userEvents = {};
   let calendarTitle = "PRO 스마트 달력";
 
   if ("Notification" in window && Notification.permission !== "granted") {
     Notification.requestPermission();
   }
 
-  // 알림 타이머
   setInterval(checkTimerAlerts, 30000);
 
   function checkTimerAlerts() {
@@ -245,7 +229,9 @@
     }
   }
 
+  // 통합 절기, 삼복 및 공휴일 데이터베이스 (2026 ~ 2027)
   const calendarDB = {
+    // --- 2026년 ---
     "2026-01-01": { holiday: "신정" }, "2026-01-05": { term: "소한" }, "2026-01-20": { term: "대한" },
     "2026-02-04": { term: "입춘" }, "2026-02-16": { holiday: "설날 연휴" }, "2026-02-17": { holiday: "설날" }, "2026-02-18": { holiday: "설날 연휴" }, "2026-02-19": { term: "우수" },
     "2026-03-01": { holiday: "삼일절" }, "2026-03-02": { holiday: "대체공휴일" }, "2026-03-06": { term: "경칩" }, "2026-03-21": { term: "춘분" },
@@ -257,7 +243,27 @@
     "2026-09-07": { term: "백로" }, "2026-09-23": { term: "추분" }, "2026-09-24": { holiday: "추석 연휴" }, "2026-09-25": { holiday: "추석" }, "2026-09-26": { holiday: "추석 연휴" },
     "2026-10-03": { holiday: "개천절" }, "2026-10-08": { term: "한로" }, "2026-10-09": { holiday: "한글날" }, "2026-10-23": { term: "상강" },
     "2026-11-07": { term: "입동" }, "2026-11-22": { term: "소설" },
-    "2026-12-07": { term: "대설" }, "2026-12-22": { term: "동지" }, "2026-12-25": { holiday: "성탄절" }
+    "2026-12-07": { term: "대설" }, "2026-12-22": { term: "동지" }, "2026-12-25": { holiday: "성탄절" },
+
+    // --- 2027년 ---
+    "2027-01-01": { holiday: "신정" }, "2027-01-05": { term: "소한" }, "2027-01-20": { term: "대한" },
+    "2027-02-04": { term: "입춘" }, "2027-02-06": { holiday: "설날 연휴" }, "2027-02-07": { holiday: "설날" }, "2027-02-08": { holiday: "설날 연휴" }, "2027-02-09": { holiday: "대체공휴일" }, "2027-02-19": { term: "우수" },
+    "2027-03-01": { holiday: "삼일절" }, "2027-03-06": { term: "경칩" }, "2027-03-21": { term: "춘분" },
+    "2027-04-05": { term: "청명" }, "2027-04-20": { term: "곡우" },
+    "2027-05-05": { holiday: "어린이날" }, "2027-05-06": { term: "입하" }, "2027-05-13": { holiday: "부처님오신날" }, "2027-05-21": { term: "소만" },
+    "2027-06-06": { holiday: "현충일", term: "망종" }, "2027-06-07": { holiday: "대체공휴일" }, "2027-06-22": { term: "하지" },
+    "2027-07-07": { term: "소서" }, "2027-07-16": { term: "초복" }, "2027-07-23": { term: "대서" }, "2027-07-26": { term: "중복" },
+    "2027-08-08": { term: "입추" }, "2027-08-15": { holiday: "광복절", term: "말복" }, "2027-08-16": { holiday: "대체공휴일" }, "2027-08-23": { term: "처서" },
+    "2027-09-08": { term: "백로" }, "2027-09-14": { holiday: "추석 연휴" }, "2027-09-15": { holiday: "추석" }, "2027-09-16": { holiday: "추석 연휴" }, "2027-09-23": { term: "추분" },
+    "2027-10-03": { holiday: "개천절" }, "2027-10-04": { holiday: "대체공휴일" }, "2027-10-08": { term: "한로" }, "2027-10-09": { holiday: "한글날" }, "2027-10-23": { term: "상강" },
+    "2027-11-07": { term: "입동" }, "2027-11-22": { term: "소설" },
+    "2027-12-07": { term: "대설" }, "2027-12-22": { term: "동지" }, "2027-12-25": { holiday: "성탄절" }
+  };
+
+  // 고정 양력 공휴일 (연도 불문)
+  const fixedHolidays = {
+    "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", "06-06": "현충일",
+    "08-15": "광복절", "10-03": "개천절", "10-09": "한글날", "12-25": "성탄절"
   };
 
   function getExactLunarDate(year, month, day) {
@@ -366,24 +372,26 @@
       const mm = String(month + 1).padStart(2, '0');
       const dd = String(date).padStart(2, '0');
       const dateStr = `${year}-${mm}-${dd}`;
+      const mdKey = `${mm}-${dd}`;
       
       let dayClass = "date-cell";
       if (dayOfWeek === 0) dayClass += " sun";
       if (dayOfWeek === 6) dayClass += " sat";
 
       const info = calendarDB[dateStr] || {};
-      if (info.holiday) dayClass += " holiday";
+      const fixedHoliday = fixedHolidays[mdKey];
+      const holidayName = info.holiday || fixedHoliday;
 
+      if (holidayName) dayClass += " holiday";
       cell.className = dayClass;
 
       const lunarText = getExactLunarDate(year, month + 1, date);
       const matchedEvents = getEventForDate(year, month + 1, date);
 
       let extraHtml = "";
-      if (info.holiday) extraHtml += `<div class="holiday-tag">🔴 ${info.holiday}</div>`;
+      if (holidayName) extraHtml += `<div class="holiday-tag">🔴 ${holidayName}</div>`;
       if (info.term) extraHtml += `<div class="solar-term">🥬 ${info.term}</div>`;
       
-      // 알림시간/D-day 표시는 숨기고, 음력 표시 및 형광펜 색상 반영
       matchedEvents.forEach(evt => {
         let typeBadge = evt.calType === 'lunar' ? '(음) ' : '';
         let colorClass = evt.color || 'hl-mint';
