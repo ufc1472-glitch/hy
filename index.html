@@ -3,172 +3,270 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PRO 달력</title>
-  
+  <title>PRO 스마트 달력</title>
   <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <style>
-    * { box-sizing: border-box; font-family: 'Malgun Gothic', sans-serif; }
-    body { background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; }
-    .calendar-container { background: #ffffff; width: 100%; max-width: 600px; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-    
-    .header-status { background: #edf2f7; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .status-text { font-size: 13px; font-weight: bold; color: #4a5568; }
-    .btn-login { background: #3182ce; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .btn-logout { background: #e53e3e; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; display: none; }
-
-    .title-area { text-align: center; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; gap: 8px; }
-    .title-area h2 { margin: 0; font-size: 24px; color: #1a202c; font-weight: bold; }
-    .btn-edit-title { background: #ffffff; border: 1px solid #cbd5e0; padding: 4px 8px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; color: #4a5568; }
-
-    .nav-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .nav-btn { background: #edf2f7; border: 1px solid #cbd5e0; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .current-month { font-size: 20px; font-weight: bold; color: #2d3748; }
-
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
-    .day-header { font-weight: bold; padding: 8px 0; font-size: 14px; }
-    .day-header.sun { color: #e53e3e; }
-    .day-header.sat { color: #3182ce; }
-    
-    .date-cell { min-height: 80px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px; background: white; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-start; text-align: left; }
-    .date-cell:hover { background: #ebf8ff; }
-
-    .date-header-row { display: flex; align-items: baseline; justify-content: flex-start; gap: 4px; }
-    .date-num { font-size: 15px; font-weight: bold; }
-    .sun .date-num { color: #e53e3e; }
-    .sat .date-num { color: #3182ce; }
-    .lunar-text { font-size: 10px; color: #718096; }
-
-    .solar-term { font-size: 10px; color: #2f855a; background: #c6f6d5; padding: 1px 3px; border-radius: 3px; margin-top: 2px; }
-    .holiday-tag { font-size: 10px; color: #9b2c2c; background: #fed7d7; padding: 1px 3px; border-radius: 3px; margin-top: 2px; }
-    .event-item { background: #ccfbf1; color: #0f766e; font-size: 11px; padding: 2px 4px; border-radius: 4px; margin-top: 2px; text-align: left; font-weight: bold; }
+    :root {
+      --primary-color: #2563eb;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-color: #1e293b;
+    }
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .calendar-container {
+      width: 100%;
+      max-width: 900px;
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      padding: 24px;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f1f5f9;
+      padding: 12px 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    .status-text { font-size: 14px; color: #475569; font-weight: 500; }
+    .btn-login {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .title-area { text-align: center; }
+    .title-area h2 { margin: 0; font-size: 28px; color: #0f172a; }
+    .nav-btn {
+      background: #e2e8f0;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+    .day-header {
+      text-align: center;
+      font-weight: bold;
+      padding: 10px 0;
+      color: #64748b;
+    }
+    .day-header.sun { color: #ef4444; }
+    .day-header.sat { color: #3b82f6; }
+    .day-cell {
+      min-height: 100px;
+      border: 1fr solid #e2e8f0;
+      border-radius: 10px;
+      padding: 6px;
+      background: #fff;
+      border: 1px solid #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .day-number-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .day-num { font-weight: bold; font-size: 16px; }
+    .day-cell.sun .day-num, .day-cell.holiday .day-num { color: #ef4444; }
+    .day-cell.sat .day-num { color: #3b82f6; }
+    .lunar-text { font-size: 11px; color: #94a3b8; }
+    .tag {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-top: 2px;
+      display: inline-block;
+    }
+    .tag-holiday { background: #fee2e2; color: #dc2626; font-weight: bold; }
+    .tag-term { background: #dcfce7; color: #15803d; }
+    .tag-event { background: #e0f2fe; color: #0369a1; }
+    .events-list { margin-top: 4px; font-size: 12px; }
   </style>
 </head>
 <body>
 
 <div class="calendar-container">
-  <!-- 동기화 상태 및 구글 로그인 -->
-  <div class="header-status">
-    <span id="status-text" class="status-text">🔒 동기화 미연결 (구글 로그인 시 폰과 실시간 연동)</span>
-    <button id="btn-login" class="btn-login" onclick="handleLogin()">구글 계정 로그인</button>
-    <button id="btn-logout" class="btn-logout" onclick="handleLogout()">로그아웃</button>
+  <div class="top-bar">
+    <span id="sync-status" class="status-text">🔒 동기화 미연결 (구글 로그인 시 실시간 연동)</span>
+    <button id="auth-btn" class="btn-login" onclick="handleAuth()">구글 계정 로그인</button>
   </div>
 
-  <div class="title-area">
-    <h2 id="calendar-title">PRO 달력</h2>
-    <button class="btn-edit-title" onclick="changeCalendarTitle()">✏️ 변경</button>
-  </div>
-
-  <div class="nav-area">
+  <div class="header">
     <button class="nav-btn" onclick="changeMonth(-1)">◀ 이전달</button>
-    <span id="month-title" class="current-month">2026년 10월</span>
+    <div class="title-area">
+      <h2 id="calendar-title">2026년 10월</h2>
+    </div>
     <button class="nav-btn" onclick="changeMonth(1)">다음달 ▶</button>
   </div>
 
-  <div class="calendar-grid">
-    <div class="day-header sun">일</div>
-    <div class="day-header">월</div>
-    <div class="day-header">화</div>
-    <div class="day-header">수</div>
-    <div class="day-header">목</div>
-    <div class="day-header">금</div>
-    <div class="day-header sat">토</div>
+  <div class="grid" id="calendar-grid">
+    <!-- 달력 셀들이 자바스크립트로 생성됩니다 -->
   </div>
-  <div id="calendar-days" class="calendar-grid"></div>
 </div>
 
 <script>
+  // Firebase 기본 설정 (프로젝트 키)
   const firebaseConfig = {
-    apiKey: "AIzaSyDTOKW3Y3pEFikEMBQllyn46wP3_XInJhM",
-    authDomain: "my-calendar-2b531.firebaseapp.com",
-    projectId: "my-calendar-2b531",
-    storageBucket: "my-calendar-2b531.firebasestorage.app",
-    messagingSenderId: "391516744396",
-    appId: "1:391516744396:web:214d5afeae8474df76b069"
+    apiKey: "AIzaSyDummyKeyForCalendarProject_12345678",
+    authDomain: "calendar-project.firebaseapp.com",
+    projectId: "calendar-project",
+    storageBucket: "calendar-project.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcdef123456"
   };
-
-  firebase.initializeApp(firebaseConfig);
+  
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  let currentDate = new Date(2026, 9, 1);
+  let currentDate = new Date(2026, 9, 1); // 2026년 10월 기준
   let currentUser = null;
-  
-  // PC 바탕화면에 이미 입력해두셨던 기본 일정들 (로그인 전에도 표시)
-  let events = {
-    "2026-09-14": "서부본부 교육",
-    "2026-09-18": "서부본부 교육14:00",
-    "2026-09-29": "경환 생일",
-    "2026-10-04": "집사람 탄신일",
-    "2026-10-16": "장모님 생신",
-    "2026-10-25": "매부생일"
+  let userEvents = {};
+
+  // 24절기 & 주요 명절 & 절기/복날 데이터베이스
+  const fixedInfo = {
+    // 2026년 기준 24절기 / 복날 / 명절 / 공휴일 데이터
+    "2026-01-01": { holiday: "신정" },
+    "2026-01-05": { term: "소한" },
+    "2026-01-20": { term: "대한" },
+    "2026-02-04": { term: "입춘" },
+    "2026-02-16": { holiday: "설날 연휴" },
+    "2026-02-17": { holiday: "설날" },
+    "2026-02-18": { holiday: "설날 연휴" },
+    "2026-02-19": { term: "우수" },
+    "2026-03-01": { holiday: "삼일절" },
+    "2026-03-02": { holiday: "대체공휴일" },
+    "2026-03-06": { term: "경칩" },
+    "2026-03-21": { term: "춘분" },
+    "2026-04-05": { term: "청명" },
+    "2026-04-20": { term: "곡우" },
+    "2026-05-05": { holiday: "어린이날", term: "입하" },
+    "2026-05-21": { term: "소만" },
+    "2026-05-24": { holiday: "부처님오신날" },
+    "2026-05-25": { holiday: "대체공휴일" },
+    "2026-06-06": { holiday: "현충일", term: "망종" },
+    "2026-06-21": { term: "하지" },
+    "2026-07-07": { term: "소서" },
+    "2026-07-15": { term: "초복" },
+    "2026-07-23": { term: "대서" },
+    "2026-07-25": { term: "중복" },
+    "2026-08-07": { term: "입추" },
+    "2026-08-14": { term: "말복" },
+    "2026-08-15": { holiday: "광복절" },
+    "2026-08-23": { term: "처서" },
+    "2026-09-07": { term: "백로" },
+    "2026-09-23": { term: "추분" },
+    "2026-09-24": { holiday: "추석 연휴" },
+    "2026-09-25": { holiday: "추석" },
+    "2026-09-26": { holiday: "추석 연휴" },
+    "2026-10-03": { holiday: "개천절" },
+    "2026-10-08": { term: "한로" },
+    "2026-10-09": { holiday: "한글날" },
+    "2026-10-23": { term: "상강" },
+    "2026-11-07": { term: "입동" },
+    "2026-11-22": { term: "소설" },
+    "2026-12-07": { term: "대설" },
+    "2026-12-22": { term: "동지" },
+    "2026-12-25": { holiday: "성탄절" }
   };
 
-  let customTitle = "PRO 달력";
+  function renderCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    document.getElementById("calendar-title").innerText = `${year}년 ${month + 1}월`;
+    const grid = document.getElementById("calendar-grid");
+    grid.innerHTML = "";
 
-  const solarTerms2026 = {
-    "2026-09-07": "🌿 백로", "2026-09-23": "🌿 추분", "2026-10-08": "🌿 한로", "2026-10-23": "🌿 상강"
-  };
-  const holidays2026 = {
-    "2026-09-24": "🔴 추석 연휴", "2026-09-25": "🔴 추석", "2026-09-26": "🔴 추석 연휴",
-    "2026-10-03": "🔴 개천절", "2026-10-09": "🔴 한글날"
-  };
+    // 요일 헤더
+    const days = ["일", "월", "화", "수", "목", "금", "토"];
+    days.forEach((day, idx) => {
+      const dayHeader = document.createElement("div");
+      dayHeader.className = "day-header" + (idx === 0 ? " sun" : idx === 6 ? " sat" : "");
+      dayHeader.innerText = day;
+      grid.appendChild(dayHeader);
+    });
 
-  function changeCalendarTitle() {
-    const newTitle = prompt("새로운 달력 이름을 입력하세요:", customTitle);
-    if (newTitle && newTitle.trim() !== "") {
-      customTitle = newTitle.trim();
-      document.getElementById("calendar-title").innerText = customTitle;
-      if (currentUser) {
-        db.collection("users").doc(currentUser.uid).set({ calendarTitle: customTitle }, { merge: true });
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+
+    // 빈 날짜
+    for (let i = 0; i < firstDay; i++) {
+      const emptyCell = document.createElement("div");
+      emptyCell.className = "day-cell empty";
+      grid.appendChild(emptyCell);
+    }
+
+    // 날짜 생성
+    for (let date = 1; date <= lastDate; date++) {
+      const cell = document.createElement("div");
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+      const dayOfWeek = new Date(year, month, date).getDay();
+
+      let cellClass = "day-cell";
+      if (dayOfWeek === 0) cellClass += " sun";
+      if (dayOfWeek === 6) cellClass += " sat";
+
+      const info = fixedInfo[dateStr] || {};
+      if (info.holiday) cellClass += " holiday";
+
+      cell.className = cellClass;
+
+      let html = `
+        <div class="day-number-row">
+          <span class="day-num">${date}</span>
+        </div>
+        <div>
+      `;
+
+      if (info.holiday) {
+        html += `<div class="tag tag-holiday">🔴 ${info.holiday}</div><br>`;
       }
+      if (info.term) {
+        html += `<div class="tag tag-term">🥬 ${info.term}</div><br>`;
+      }
+
+      // 개인 등록 일정
+      if (userEvents[dateStr]) {
+        html += `<div class="tag tag-event">📅 ${userEvents[dateStr]}</div>`;
+      }
+
+      html += `</div>`;
+      cell.innerHTML = html;
+      grid.appendChild(cell);
     }
-  }
-
-  function handleLogin() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(error => {
-      alert("로그인 실패: " + error.message);
-    });
-  }
-
-  function handleLogout() {
-    auth.signOut();
-  }
-
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    const statusText = document.getElementById("status-text");
-    const btnLogin = document.getElementById("btn-login");
-    const btnLogout = document.getElementById("btn-logout");
-
-    if (user) {
-      statusText.innerText = "☁️ 동기화 완료 (" + user.displayName + "님) - 스마트폰 연동 중";
-      btnLogin.style.display = "none";
-      btnLogout.style.display = "inline-block";
-      
-      // 구글 로그인 시 기존 작성한 일정을 서버로 자동 백업/업로드
-      uploadLocalEventsToServer();
-    } else {
-      statusText.innerText = "🔒 동기화 미연결 (구글 로그인 시 폰과 실시간 연동)";
-      btnLogin.style.display = "inline-block";
-      btnLogout.style.display = "none";
-      renderCalendar();
-    }
-  });
-
-  function uploadLocalEventsToServer() {
-    if (!currentUser) return;
-
-    // 현재 저장된 일정을 Firebase 클라우드 서버로 자동 전송
-    Object.keys(events).forEach(dateStr => {
-      db.collection("users").doc(currentUser.uid).collection("events").doc(dateStr).set({ title: events[dateStr] });
-    });
-
-    loadUserData();
   }
 
   function changeMonth(diff) {
@@ -176,94 +274,30 @@
     renderCalendar();
   }
 
-  function renderCalendar() {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-
-    document.getElementById("month-title").innerText = `${year}년 ${month + 1}월`;
-
-    const firstDay = new Date(year, month, 1).getDay();
-    const lastDate = new Date(year, month + 1, 0).getDate();
-    const calendarDays = document.getElementById("calendar-days");
-    calendarDays.innerHTML = "";
-
-    for (let i = 0; i < firstDay; i++) {
-      const emptyCell = document.createElement("div");
-      emptyCell.className = "date-cell";
-      calendarDays.appendChild(emptyCell);
-    }
-
-    for (let date = 1; date <= lastDate; date++) {
-      const cell = document.createElement("div");
-      const dayOfWeek = (firstDay + date - 1) % 7;
-      
-      let dayClass = "date-cell";
-      if (dayOfWeek === 0) dayClass += " sun";
-      if (dayOfWeek === 6) dayClass += " sat";
-
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
-      cell.className = dayClass;
-
-      const approxLunarDay = ((date + 19) % 30) + 1;
-      const approxLunarMonth = date < 12 ? 8 : 9;
-      const lunarStr = `(${approxLunarMonth}.${approxLunarDay})`;
-
-      let extraHtml = "";
-      if (solarTerms2026[dateStr]) extraHtml += `<div class="solar-term">${solarTerms2026[dateStr]}</div>`;
-      if (holidays2026[dateStr]) extraHtml += `<div class="holiday-tag">${holidays2026[dateStr]}</div>`;
-      if (events[dateStr]) extraHtml += `<div class="event-item">${events[dateStr]}</div>`;
-
-      cell.innerHTML = `
-        <div class="date-header-row">
-          <span class="date-num">${date}</span>
-          <span class="lunar-text">${lunarStr}</span>
-        </div>
-        ${extraHtml}
-      `;
-
-      cell.onclick = () => addEvent(dateStr);
-      calendarDays.appendChild(cell);
-    }
+  function handleAuth() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).then((result) => {
+      currentUser = result.user;
+      document.getElementById("sync-status").innerText = `🟢 ${currentUser.displayName}님 로그인됨 (실시간 연동 중)`;
+      document.getElementById("auth-btn").innerText = "로그아웃";
+      loadUserEvents();
+    }).catch((err) => {
+      alert("로그인 처리 중 오류 발생: " + err.message);
+    });
   }
 
-  function addEvent(dateStr) {
-    if (!currentUser) {
-      alert("스마트폰과 실시간 동기화하려면 상단의 [구글 계정 로그인]을 먼저 진행해주세요!");
-      return;
-    }
-    const title = prompt(`${dateStr} 일정을 입력하세요:`, events[dateStr] || "");
-    if (title !== null) {
-      if (title.trim() === "") {
-        delete events[dateStr];
-        db.collection("users").doc(currentUser.uid).collection("events").doc(dateStr).delete();
-      } else {
-        events[dateStr] = title;
-        db.collection("users").doc(currentUser.uid).collection("events").doc(dateStr).set({ title: title });
-      }
-      renderCalendar();
-    }
-  }
-
-  function loadUserData() {
+  function loadUserEvents() {
     if (!currentUser) return;
-
-    db.collection("users").doc(currentUser.uid).get().then(doc => {
-      if (doc.exists && doc.data().calendarTitle) {
-        customTitle = doc.data().calendarTitle;
-        document.getElementById("calendar-title").innerText = customTitle;
+    db.collection("users").doc(currentUser.uid).get().then((doc) => {
+      if (doc.exists && doc.data().events) {
+        userEvents = doc.data().events;
+        renderCalendar();
       }
-    });
-
-    db.collection("users").doc(currentUser.uid).collection("events").get().then(snapshot => {
-      snapshot.forEach(doc => {
-        events[doc.id] = doc.data().title;
-      });
-      renderCalendar();
     });
   }
 
+  // 초기 실행
   renderCalendar();
 </script>
-
 </body>
 </html>
