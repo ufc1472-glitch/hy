@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>나만의 달력</title>
+  <title>스마트 동기화 달력</title>
   
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -13,32 +13,42 @@
   <style>
     * { box-sizing: border-box; font-family: 'Malgun Gothic', sans-serif; }
     body { background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; }
-    .calendar-container { background: #ffffff; width: 100%; max-width: 500px; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .calendar-container { background: #ffffff; width: 100%; max-width: 550px; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     
-    .header-status { background: #edf2f7; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .status-text { font-size: 14px; font-weight: bold; color: #4a5568; }
-    .btn-login { background: #3182ce; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-    .btn-logout { background: #e53e3e; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; display: none; }
+    .header-status { background: #edf2f7; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .status-text { font-size: 13px; font-weight: bold; color: #4a5568; }
+    .btn-login { background: #3182ce; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .btn-logout { background: #e53e3e; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; display: none; }
 
-    .title-area { text-align: center; margin-bottom: 15px; }
-    .title-area h2 { margin: 0; font-size: 24px; color: #2d3748; }
+    /* 타이틀 및 제목 변경 버튼 */
+    .title-area { text-align: center; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+    .title-area h2 { margin: 0; font-size: 24px; color: #1a202c; font-weight: bold; }
+    .btn-edit-title { background: #ffffff; border: 1px solid #cbd5e0; padding: 4px 8px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; color: #4a5568; }
+    .btn-edit-title:hover { background: #edf2f7; }
 
     .nav-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .nav-btn { background: #edf2f7; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .current-month { font-size: 18px; font-weight: bold; color: #2d3748; }
+    .nav-btn { background: #edf2f7; border: 1px solid #cbd5e0; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .current-month { font-size: 20px; font-weight: bold; color: #2d3748; }
 
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
     .day-header { font-weight: bold; padding: 8px 0; font-size: 14px; }
     .day-header.sun { color: #e53e3e; }
     .day-header.sat { color: #3182ce; }
     
-    .date-cell { min-height: 65px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px; background: white; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-start; }
+    .date-cell { min-height: 75px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px; background: white; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-start; text-align: left; position: relative; }
     .date-cell:hover { background: #ebf8ff; }
-    .date-num { font-size: 14px; font-weight: bold; text-align: left; }
+    .date-cell.today { border: 2px solid #3182ce; background-color: #ebf8ff; }
+
+    .date-header-row { display: flex; align-items: baseline; justify-content: flex-start; gap: 4px; }
+    .date-num { font-size: 15px; font-weight: bold; }
     .sun .date-num { color: #e53e3e; }
     .sat .date-num { color: #3182ce; }
-    
-    .event-item { background: #feebc8; color: #742a2a; font-size: 11px; padding: 2px 4px; border-radius: 4px; margin-top: 2px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lunar-text { font-size: 10px; color: #718096; }
+
+    /* 절기 및 일정 스타일 */
+    .solar-term { font-size: 10px; color: #2f855a; background: #c6f6d5; padding: 1px 3px; border-radius: 3px; margin-top: 2px; }
+    .holiday-tag { font-size: 10px; color: #9b2c2c; background: #fed7d7; padding: 1px 3px; border-radius: 3px; margin-top: 2px; }
+    .event-item { background: #e2e8f0; color: #2d3748; font-size: 11px; padding: 2px 4px; border-radius: 4px; margin-top: 2px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -46,18 +56,16 @@
 <div class="calendar-container">
   <!-- 동기화 로그인 상태 표시 -->
   <div class="header-status">
-    <span id="status-text" class="status-text">🔒 동기화 미연결 (로그인 필요)</span>
+    <span id="status-text" class="status-text">☁️ 동기화 준비 중...</span>
     <button id="btn-login" class="btn-login" onclick="handleLogin()">구글 계정 로그인</button>
     <button id="btn-logout" class="btn-logout" onclick="handleLogout()">로그아웃</button>
   </div>
 
-  <!-- ======================================================== -->
-  <!-- 👇 [여기서 달력 제목을 수정하세요!]                     -->
-  <!-- ======================================================== -->
+  <!-- 타이틀 및 제목 변경 버튼 -->
   <div class="title-area">
-    <h2>아무개님의 달력</h2>
+    <h2 id="calendar-title">PRO 달력</h2>
+    <button class="btn-edit-title" onclick="changeCalendarTitle()">✏️ 변경</button>
   </div>
-  <!-- ======================================================== -->
 
   <!-- 달 이동 버튼 -->
   <div class="nav-area">
@@ -80,7 +88,7 @@
 </div>
 
 <script>
-  // Firebase 연동 설정
+  // Firebase 설정
   const firebaseConfig = {
     apiKey: "AIzaSyDTOKW3Y3pEFikEMBQllyn46wP3_XInJhM",
     authDomain: "my-calendar-2b531.firebaseapp.com",
@@ -97,6 +105,32 @@
   let currentDate = new Date(2026, 8, 1);
   let currentUser = null;
   let events = {};
+  let customTitle = "PRO 달력";
+
+  // 2026년 샘플 음력 및 주요 절기/연휴 데이터
+  const solarTerms2026 = {
+    "2026-09-07": "🌿 백로",
+    "2026-09-23": "🌿 추분"
+  };
+  const holidays2026 = {
+    "2026-09-24": "🔴 추석 연휴",
+    "2026-09-25": "🔴 추석",
+    "2026-09-26": "🔴 추석 연휴"
+  };
+
+  // 제목 변경 버튼 기능
+  function changeCalendarTitle() {
+    const newTitle = prompt("새로운 달력 이름을 입력하세요:", customTitle);
+    if (newTitle && newTitle.trim() !== "") {
+      customTitle = newTitle.trim();
+      document.getElementById("calendar-title").innerText = customTitle;
+      
+      // 구글 로그인 상태면 데이터베이스에 제목 저장
+      if (currentUser) {
+        db.collection("users").doc(currentUser.uid).set({ calendarTitle: customTitle }, { merge: true });
+      }
+    }
+  }
 
   function handleLogin() {
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -119,7 +153,7 @@
       statusText.innerText = "☁️ 동기화 완료 (" + user.displayName + "님)";
       btnLogin.style.display = "none";
       btnLogout.style.display = "inline-block";
-      loadEvents();
+      loadUserData();
     } else {
       statusText.innerText = "🔒 동기화 미연결 (로그인 필요)";
       btnLogin.style.display = "inline-block";
@@ -132,7 +166,6 @@
   function changeMonth(diff) {
     currentDate.setMonth(currentDate.getMonth() + diff);
     renderCalendar();
-    if (currentUser) loadEvents();
   }
 
   function renderCalendar() {
@@ -145,6 +178,8 @@
     const lastDate = new Date(year, month + 1, 0).getDate();
     const calendarDays = document.getElementById("calendar-days");
     calendarDays.innerHTML = "";
+
+    const todayStr = new Date().toISOString().split('T')[0];
 
     for (let i = 0; i < firstDay; i++) {
       const emptyCell = document.createElement("div");
@@ -159,18 +194,38 @@
       let dayClass = "date-cell";
       if (dayOfWeek === 0) dayClass += " sun";
       if (dayOfWeek === 6) dayClass += " sat";
-      cell.className = dayClass;
 
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
 
-      let eventHtml = "";
+      if (dateStr === "2026-09-20") dayClass += " today";
+
+      cell.className = dayClass;
+
+      // 간이 음력 계산 표시 (7월 중순~8월 중순)
+      const approxLunarDay = ((date + 19) % 30) + 1;
+      const approxLunarMonth = date < 12 ? 7 : 8;
+      const lunarStr = `(${approxLunarMonth}.${approxLunarDay})`;
+
+      let extraHtml = "";
+      if (solarTerms2026[dateStr]) {
+        extraHtml += `<div class="solar-term">${solarTerms2026[dateStr]}</div>`;
+      }
+      if (holidays2026[dateStr]) {
+        extraHtml += `<div class="holiday-tag">${holidays2026[dateStr]}</div>`;
+      }
       if (events[dateStr]) {
-        eventHtml = `<div class="event-item">${events[dateStr]}</div>`;
+        extraHtml += `<div class="event-item">${events[dateStr]}</div>`;
       }
 
-      cell.innerHTML = `<div class="date-num">${date}</div>${eventHtml}`;
-      cell.onclick = () => addEvent(dateStr);
+      cell.innerHTML = `
+        <div class="date-header-row">
+          <span class="date-num">${date}</span>
+          <span class="lunar-text">${lunarStr}</span>
+        </div>
+        ${extraHtml}
+      `;
 
+      cell.onclick = () => addEvent(dateStr);
       calendarDays.appendChild(cell);
     }
   }
@@ -193,8 +248,18 @@
     }
   }
 
-  function loadEvents() {
+  function loadUserData() {
     if (!currentUser) return;
+
+    // 사용자 커스텀 제목 불러오기
+    db.collection("users").doc(currentUser.uid).get().then(doc => {
+      if (doc.exists && doc.data().calendarTitle) {
+        customTitle = doc.data().calendarTitle;
+        document.getElementById("calendar-title").innerText = customTitle;
+      }
+    });
+
+    // 일정 불러오기
     db.collection("users").doc(currentUser.uid).collection("events").get().then(snapshot => {
       events = {};
       snapshot.forEach(doc => {
