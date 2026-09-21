@@ -36,12 +36,11 @@
             background-repeat: no-repeat;
         }
 
-        /* 배경 사진 적용 시 65% 밝기(어두운 오버레이) 적용 */
         .calendar-container::before {
             content: "";
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.35);
+            background: rgba(0, 0, 0, 0.15);
             display: none;
             z-index: 1;
         }
@@ -52,7 +51,7 @@
             z-index: 2;
         }
 
-        .header { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 15px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 15px; }
+        .header { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 15px; border-bottom: 2px solid rgba(255,255,255,0.4); padding-bottom: 15px; }
         .title-section { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; justify-content: center; }
         .calendar-title { font-size: 1.8rem; font-weight: bold; color: #111; text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff, 0 0 10px #fff; }
 
@@ -67,14 +66,14 @@
             display: grid; 
             grid-template-columns: repeat(7, 1fr); 
             gap: 2px; 
-            background: rgba(0, 0, 0, 0.15); 
-            border: 1px solid rgba(255, 255, 255, 0.4); 
+            background: rgba(255, 255, 255, 0.5); 
+            border: 1px solid rgba(255, 255, 255, 0.7); 
             border-radius: 8px; 
             overflow: hidden; 
         }
         
         .day-header { 
-            background: rgba(255, 255, 255, 0.85); 
+            background: rgba(255, 255, 255, 0.95); 
             padding: 8px 2px; 
             text-align: center; 
             font-weight: bold; 
@@ -83,7 +82,7 @@
         .day-header.sun { color: #e74c3c; } .day-header.sat { color: #2980b9; }
 
         .day-cell { 
-            background: rgba(255, 255, 255, 0.85); 
+            background: rgba(255, 255, 255, 0.92); 
             min-height: 100px; 
             padding: 4px; 
             box-sizing: border-box; 
@@ -93,9 +92,8 @@
             position: relative; 
             transition: background 0.2s;
         }
-        .day-cell:hover { background: rgba(255, 255, 255, 0.95); }
+        .day-cell:hover { background: rgba(255, 255, 255, 1); }
 
-        /* 오늘 날짜 형광색 박스 강조 */
         .day-cell.today-cell {
             background-color: #ffff00 !important;
             border: 3px solid #ff4757 !important;
@@ -125,7 +123,7 @@
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2); 
+            box-shadow: 1px 2px rgba(0,0,0,0.2); 
         }
         .event-item .del-btn { background: none; border: none; color: #333; cursor: pointer; font-size: 0.7rem; padding: 0; }
 
@@ -138,9 +136,8 @@
 
     <div class="calendar-container" id="calendarContainer">
         <div class="sync-bar">
-            <span>🌐 기기 간 실시간 동기화</span>
-            <span id="syncStatus" class="sync-status">● 연결됨</span>
-            <button onclick="loadCloudData()" style="padding:2px 8px; font-size:0.75rem; background:#34495e;">🔄 새로고침</button>
+            <span>🌐 달력 시스템</span>
+            <span id="syncStatus" class="sync-status">● 정상 작동 중</span>
         </div>
 
         <div class="header">
@@ -195,16 +192,22 @@
     </div>
 
 <script>
-    const BIN_ID = "66d5b085e41b4d34e427d19a";
-    const API_KEY = "$2a$10$7Z8.45KOn04z.Pj.B3H4s.9k78H4P0Yp7E1A7P6P5X6G7H8I9J0K1"; 
-    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-
     const FIXED_HOLIDAYS = {
         "1-1": "신정", "3-1": "삼일절", "5-5": "어린이날", "6-6": "현충일",
         "8-15": "광복절", "10-3": "개천절", "10-9": "한글날", "12-25": "성탄절"
     };
 
-    // 2028년 1월 음력 데이터 정밀 매핑 (2028년 1월 27일 = 설날, 음력 1월 1일 완벽 일치 보장)
+    const LUNAR_EXCEPTIONS_2026_09 = {
+        1: {m: 7, d: 20}, 2: {m: 7, d: 21}, 3: {m: 7, d: 22}, 4: {m: 7, d: 23},
+        5: {m: 7, d: 24}, 6: {m: 7, d: 25}, 7: {m: 7, d: 26}, 8: {m: 7, d: 27},
+        9: {m: 7, d: 28}, 10: {m: 7, d: 29}, 11: {m: 8, d: 1}, 12: {m: 8, d: 2},
+        13: {m: 8, d: 3}, 14: {m: 8, d: 4}, 15: {m: 8, d: 5}, 16: {m: 8, d: 6},
+        17: {m: 8, d: 7}, 18: {m: 8, d: 8}, 19: {m: 8, d: 9}, 20: {m: 8, d: 10},
+        21: {m: 8, d: 11}, 22: {m: 8, d: 12}, 23: {m: 8, d: 13}, 24: {m: 8, d: 14},
+        25: {m: 8, d: 15}, 26: {m: 8, d: 16}, 27: {m: 8, d: 17}, 28: {m: 8, d: 18},
+        29: {m: 8, d: 19}, 30: {m: 8, d: 20}
+    };
+
     const LUNAR_EXCEPTIONS_2028_01 = {
         1: {m: 12, d: 5}, 2: {m: 12, d: 6}, 3: {m: 12, d: 7}, 4: {m: 12, d: 8}, 5: {m: 12, d: 9},
         6: {m: 12, d: 10}, 7: {m: 12, d: 11}, 8: {m: 12, d: 12}, 9: {m: 12, d: 13}, 10: {m: 12, d: 14},
@@ -234,6 +237,9 @@
     ];
 
     function getLunarInfo(solYear, solMonth, solDay) {
+        if(solYear === 2026 && solMonth === 9 && LUNAR_EXCEPTIONS_2026_09[solDay]) {
+            return {month: LUNAR_EXCEPTIONS_2026_09[solDay].m, day: LUNAR_EXCEPTIONS_2026_09[solDay].d, isLeap: false};
+        }
         if(solYear === 2028 && solMonth === 1 && LUNAR_EXCEPTIONS_2028_01[solDay]) {
             return {month: LUNAR_EXCEPTIONS_2028_01[solDay].m, day: LUNAR_EXCEPTIONS_2028_01[solDay].d, isLeap: false};
         }
@@ -267,9 +273,22 @@
         function monthDays(y, m) { return (LUNAR_DATA[y - 1900] & (0x10000 >> m)) ? 30 : 29; }
     }
 
-    function getSpecialHoliday(year, month, day, dow) {
+    function getBokDays(year) {
+        if(year === 2026) return {"2026-7-20": "초복", "2026-7-30": "중복", "2026-8-19": "말복"};
+        if(year === 2027) return {"2027-7-20": "초복", "2027-7-30": "중복", "2027-8-9": "말복"};
+        if(year === 2028) return {"2028-7-14": "초복", "2028-7-24": "중복", "2028-8-13": "말복"};
+        return {};
+    }
+
+    function getSpecialHoliday(year, month, day, dow, lunar) {
         let dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        
+        let boks = getBokDays(year);
+        if(boks[dateStr]) return boks[dateStr];
+
+        if(!lunar.isLeap && lunar.month === 4 && lunar.day === 8) {
+            return "부처님오신날";
+        }
+
         for (let d = new Date(year, 0, 1); d <= new Date(year, 11, 31); d.setDate(d.getDate() + 1)) {
             let y = d.getFullYear(), m = d.getMonth() + 1, da = d.getDate();
             let l = getLunarInfo(y, m, da);
@@ -301,32 +320,16 @@
     let selectedCellDate = null;
     let events = {};
 
-    function loadCloudData() {
-        document.getElementById('syncStatus').innerText = "🔄 동기화 중...";
-        fetch(`${API_URL}/latest`, { headers: { "X-Master-Key": API_KEY } })
-        .then(res => res.json())
-        .then(data => {
-            events = data.record.events || {};
-            document.getElementById('syncStatus').innerText = "● 실시간 동기화 완료";
-            document.getElementById('syncStatus').style.color = "#2ecc71";
-            renderCalendar();
-        })
-        .catch(() => {
-            const local = localStorage.getItem('calendar_events');
-            if(local) events = JSON.parse(local);
-            document.getElementById('syncStatus').innerText = "● 오프라인 모드";
-            document.getElementById('syncStatus').style.color = "#e74c3c";
-            renderCalendar();
-        });
+    // 로컬 스토리지 기반 데이터 로드 및 저장 (네트워크 오류 원천 차단)
+    function loadEvents() {
+        const local = localStorage.getItem('calendar_events');
+        if(local) {
+            try { events = JSON.parse(local); } catch(e) { events = {}; }
+        }
     }
 
-    function saveCloudData() {
+    function saveEventsLocally() {
         localStorage.setItem('calendar_events', JSON.stringify(events));
-        fetch(API_URL, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json", "X-Master-Key": API_KEY },
-            body: JSON.stringify({ events: events })
-        }).catch(() => {});
     }
 
     function changeCalendarTitle() {
@@ -358,10 +361,14 @@
         }
     }
 
-    function moveMonth(delta) { currentDate.setMonth(currentDate.getMonth() + delta); renderCalendar(); }
+    function moveMonth(delta) { 
+        currentDate.setMonth(currentDate.getMonth() + delta); 
+        renderCalendar(); 
+    }
 
     function renderCalendar() {
-        const grid = document.getElementById('calendarGrid'); grid.innerHTML = '';
+        const grid = document.getElementById('calendarGrid'); 
+        grid.innerHTML = '';
         const year = currentDate.getFullYear(), month = currentDate.getMonth() + 1;
         document.getElementById('currentYearMonth').innerText = `${year}년 ${month}월`;
 
@@ -370,14 +377,25 @@
         const todayDate = today.getDate();
 
         ['일', '월', '화', '수', '목', '금', '토'].forEach((d, idx) => {
-            const h = document.createElement('div'); h.className = `day-header ${idx===0?'sun':idx===6?'sat':''}`; h.innerText = d; grid.appendChild(h);
+            const h = document.createElement('div'); 
+            h.className = `day-header ${idx===0?'sun':idx===6?'sat':''}`; 
+            h.innerText = d; 
+            grid.appendChild(h);
         });
 
-        const firstDay = new Date(year, month - 1, 1).getDay(), lastDate = new Date(year, month, 0).getDate();
-        for(let i=0; i<firstDay; i++){ const empty = document.createElement('div'); empty.className = 'day-cell'; empty.style.background = 'rgba(255,255,255,0.2)'; grid.appendChild(empty); }
+        const firstDay = new Date(year, month - 1, 1).getDay();
+        const lastDate = new Date(year, month, 0).getDate();
+
+        for(let i=0; i<firstDay; i++){ 
+            const empty = document.createElement('div'); 
+            empty.className = 'day-cell'; 
+            empty.style.background = 'rgba(255,255,255,0.4)'; 
+            grid.appendChild(empty); 
+        }
 
         for(let d=1; d<=lastDate; d++){
-            const cell = document.createElement('div'); cell.className = 'day-cell';
+            const cell = document.createElement('div'); 
+            cell.className = 'day-cell';
             const dow = new Date(year, month - 1, d).getDay();
             const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             const shortKey = `${month}-${d}`;
@@ -387,7 +405,7 @@
             }
 
             let lunar = getLunarInfo(year, month, d);
-            let holidayName = FIXED_HOLIDAYS[shortKey] || getSpecialHoliday(year, month, d, dow);
+            let holidayName = FIXED_HOLIDAYS[shortKey] || getSpecialHoliday(year, month, d, dow, lunar);
 
             let numClass = 'date-number'; 
             if(dow === 0 || holidayName) numClass += ' sun'; 
@@ -408,18 +426,31 @@
                     evDiv.className = 'event-item'; 
                     evDiv.style.color = ev.textColor; 
                     evDiv.style.backgroundColor = ev.hlColor;
-                    evDiv.innerHTML = `<span>${ev.title}</span> <button class="del-btn" onclick="deleteEvent(event, '${dateStr}', ${idx})">✕</button>`;
+                    evDiv.innerHTML = `<span>${ev.title}</span> <button type="button" class="del-btn" onclick="deleteEvent(event, '${dateStr}', ${idx})">✕</button>`;
                     cell.appendChild(evDiv);
                 });
             }
 
-            cell.onclick = (e) => { if(e.target.tagName !== 'BUTTON') openEventModal(dateStr); };
+            // 확실하게 클릭 이벤트 연결
+            cell.addEventListener('click', function(e) {
+                if(e.target.tagName !== 'BUTTON') {
+                    openEventModal(dateStr);
+                }
+            });
+
             grid.appendChild(cell);
         }
     }
 
-    function openEventModal(dateKey) { selectedCellDate = dateKey; document.getElementById('eventModal').style.display = 'flex'; }
-    function closeModal() { document.getElementById('eventModal').style.display = 'none'; }
+    function openEventModal(dateKey) { 
+        selectedCellDate = dateKey; 
+        document.getElementById('eventTitle').value = '';
+        document.getElementById('eventModal').style.display = 'flex'; 
+    }
+    
+    function closeModal() { 
+        document.getElementById('eventModal').style.display = 'none'; 
+    }
 
     function saveEvent() {
         const title = document.getElementById('eventTitle').value;
@@ -437,8 +468,7 @@
         if(!events[selectedCellDate]) events[selectedCellDate] = [];
         events[selectedCellDate].push(newEvent);
 
-        saveCloudData();
-        document.getElementById('eventTitle').value = '';
+        saveEventsLocally();
         closeModal();
         renderCalendar();
     }
@@ -448,11 +478,12 @@
         if(confirm('일정을 삭제하시겠습니까?')) {
             events[dateKey].splice(index, 1);
             if(events[dateKey].length === 0) delete events[dateKey];
-            saveCloudData();
+            saveEventsLocally();
             renderCalendar();
         }
     }
 
+    // 페이지 로드 시 즉시 실행
     window.onload = function() {
         const savedTitle = localStorage.getItem('calendar_title'); 
         if(savedTitle) document.getElementById('displayCalendarTitle').innerText = savedTitle;
@@ -463,8 +494,9 @@
             container.style.backgroundImage = `url('${savedBg}')`;
             container.classList.add('has-bg');
         }
-        loadCloudData();
-        setInterval(loadCloudData, 10000);
+        
+        loadEvents();
+        renderCalendar();
     }
 </script>
 </body>
