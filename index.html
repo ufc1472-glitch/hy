@@ -136,7 +136,7 @@
 
     <div class="calendar-container" id="calendarContainer">
         <div class="sync-bar">
-            <span>🌐 달력 시스템</span>
+            <span>🌐 영구 달력 시스템 (자동 삼복 계산 적용)</span>
             <span id="syncStatus" class="sync-status">● 정상 작동 중</span>
         </div>
 
@@ -273,22 +273,44 @@
         function monthDays(y, m) { return (LUNAR_DATA[y - 1900] & (0x10000 >> m)) ? 30 : 29; }
     }
 
-    // 2024년 ~ 2030년 삼복(초복, 중복, 말복) 데이터 정확히 매핑
+    // [영구 자동 삼복 계산 알고리즘] 60갑자 경일(庚日) 기준 계산
     function getBokDays(year) {
-        const bokTable = {
-            2024: {"2024-7-15": "초복", "2024-7-25": "중복", "2024-8-14": "말복"},
-            2025: {"2025-7-20": "초복", "2025-7-30": "중복", "2025-8-9": "말복"},
-            2026: {"2026-7-15": "초복", "2026-7-25": "중복", "2026-8-14": "말복"},
-            2027: {"2027-7-20": "초복", "2027-7-30": "중복", "2027-8-9": "말복"},
-            2028: {"2028-7-14": "초복", "2028-7-24": "중복", "2028-8-13": "말복"},
-            2029: {"2029-7-19": "초복", "2029-7-29": "중복", "2029-8-8": "말복"},
-            2030: {"2030-7-14": "초복", "2030-7-24": "중복", "2030-8-13": "말복"}
-        };
-        return bokTable[year] || {};
+        const refGyeong = new Date(2024, 5, 25); // 기준 경일 (2024년 6월 25일)
+        
+        function findNextGyeong(startDate) {
+            let d = new Date(startDate);
+            while (true) {
+                let diff = Math.round((d - refGyeong) / 86400000);
+                if (diff % 10 === 0) return new Date(d);
+                d.setDate(d.getDate() + 1);
+            }
+        }
+
+        // 초복/중복: 하지(6월 21일경) 이후 첫 경일로부터 계산
+        let solstice = new Date(year, 5, 21);
+        let firstGyeong = findNextGyeong(solstice);
+        
+        let chobokDate = new Date(firstGyeong);
+        chobokDate.setDate(chobokDate.getDate() + 20); // 3번째 경일 (초복)
+        
+        let jungbokDate = new Date(firstGyeong);
+        jungbokDate.setDate(jungbokDate.getDate() + 30); // 4번째 경일 (중복)
+
+        // 말복: 입추(8월 7일경) 이후 첫 경일
+        let lichu = new Date(year, 7, 7);
+        let malbokDate = findNextGyeong(lichu);
+
+        const fmt = (dt) => `${dt.getFullYear()}-${dt.getMonth() + 1}-${dt.getDate()}`;
+        
+        let result = {};
+        result[fmt(chobokDate)] = "초복";
+        result[fmt(jungbokDate)] = "중복";
+        result[fmt(malbokDate)] = "말복";
+        return result;
     }
 
     function getSpecialHoliday(year, month, day, dow, lunar) {
-        let dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        let dateStr = `${year}-${month}-${day}`;
         let boks = getBokDays(year);
         if(boks[dateStr]) return boks[dateStr];
 
@@ -311,7 +333,7 @@
             }
         }
         return null;
-        function fmt(dt) { return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
+        function fmt(dt) { return `${dt.getFullYear()}-${dt.getMonth()+1}-${dt.getDate()}`; }
     }
 
     function getSolarTerm(m, d) {
@@ -403,7 +425,7 @@
             const cell = document.createElement('div'); 
             cell.className = 'day-cell';
             const dow = new Date(year, month - 1, d).getDay();
-            const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const dateStr = `${year}-${month}-${d}`;
             const shortKey = `${month}-${d}`;
 
             if (isCurrentMonth && d === todayDate) {
