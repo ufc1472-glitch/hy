@@ -273,11 +273,18 @@
         function monthDays(y, m) { return (LUNAR_DATA[y - 1900] & (0x10000 >> m)) ? 30 : 29; }
     }
 
+    // 2024년 ~ 2030년 삼복(초복, 중복, 말복) 데이터 정확히 매핑
     function getBokDays(year) {
-        if(year === 2026) return {"2026-7-20": "초복", "2026-7-30": "중복", "2026-8-19": "말복"};
-        if(year === 2027) return {"2027-7-20": "초복", "2027-7-30": "중복", "2027-8-9": "말복"};
-        if(year === 2028) return {"2028-7-14": "초복", "2028-7-24": "중복", "2028-8-13": "말복"};
-        return {};
+        const bokTable = {
+            2024: {"2024-7-15": "초복", "2024-7-25": "중복", "2024-8-14": "말복"},
+            2025: {"2025-7-20": "초복", "2025-7-30": "중복", "2025-8-9": "말복"},
+            2026: {"2026-7-15": "초복", "2026-7-25": "중복", "2026-8-14": "말복"},
+            2027: {"2027-7-20": "초복", "2027-7-30": "중복", "2027-8-9": "말복"},
+            2028: {"2028-7-14": "초복", "2028-7-24": "중복", "2028-8-13": "말복"},
+            2029: {"2029-7-19": "초복", "2029-7-29": "중복", "2029-8-8": "말복"},
+            2030: {"2030-7-14": "초복", "2030-7-24": "중복", "2030-8-13": "말복"}
+        };
+        return bokTable[year] || {};
     }
 
     function getSpecialHoliday(year, month, day, dow, lunar) {
@@ -320,7 +327,6 @@
     let selectedCellDate = null;
     let events = {};
 
-    // 로컬 스토리지 기반 데이터 로드 및 저장 (네트워크 오류 원천 차단)
     function loadEvents() {
         const local = localStorage.getItem('calendar_events');
         if(local) {
@@ -431,7 +437,6 @@
                 });
             }
 
-            // 확실하게 클릭 이벤트 연결
             cell.addEventListener('click', function(e) {
                 if(e.target.tagName !== 'BUTTON') {
                     openEventModal(dateStr);
@@ -483,7 +488,6 @@
         }
     }
 
-    // 페이지 로드 시 즉시 실행
     window.onload = function() {
         const savedTitle = localStorage.getItem('calendar_title'); 
         if(savedTitle) document.getElementById('displayCalendarTitle').innerText = savedTitle;
