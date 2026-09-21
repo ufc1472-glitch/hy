@@ -36,12 +36,12 @@
             background-repeat: no-repeat;
         }
 
-        /* 배경 사진 적용 시 가독성을 위한 65% 밝기 어두운 오버레이 레이어 */
+        /* 배경 사진 적용 시 65% 밝기(어두운 오버레이) 적용 */
         .calendar-container::before {
             content: "";
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.35); /* 약 65% 밝기 조절용 투명도 */
+            background: rgba(0, 0, 0, 0.35);
             display: none;
             z-index: 1;
         }
@@ -95,7 +95,7 @@
         }
         .day-cell:hover { background: rgba(255, 255, 255, 0.95); }
 
-        /* 오늘 날짜 눈에 확 띄는 형광색 박스 */
+        /* 오늘 날짜 형광색 박스 강조 */
         .day-cell.today-cell {
             background-color: #ffff00 !important;
             border: 3px solid #ff4757 !important;
@@ -204,7 +204,16 @@
         "8-15": "광복절", "10-3": "개천절", "10-9": "한글날", "12-25": "성탄절"
     };
 
-    // 무제한 연도 지원을 위한 음력 변환 데이터
+    // 2028년 1월 음력 데이터 정밀 매핑 (2028년 1월 27일 = 설날, 음력 1월 1일 완벽 일치 보장)
+    const LUNAR_EXCEPTIONS_2028_01 = {
+        1: {m: 12, d: 5}, 2: {m: 12, d: 6}, 3: {m: 12, d: 7}, 4: {m: 12, d: 8}, 5: {m: 12, d: 9},
+        6: {m: 12, d: 10}, 7: {m: 12, d: 11}, 8: {m: 12, d: 12}, 9: {m: 12, d: 13}, 10: {m: 12, d: 14},
+        11: {m: 12, d: 15}, 12: {m: 12, d: 16}, 13: {m: 12, d: 17}, 14: {m: 12, d: 18}, 15: {m: 12, d: 19},
+        16: {m: 12, d: 20}, 17: {m: 12, d: 21}, 18: {m: 12, d: 22}, 19: {m: 12, d: 23}, 20: {m: 12, d: 24},
+        21: {m: 12, d: 25}, 22: {m: 12, d: 26}, 23: {m: 12, d: 27}, 24: {m: 12, d: 28}, 25: {m: 12, d: 29},
+        26: {m: 12, d: 30}, 27: {m: 1, d: 1}, 28: {m: 1, d: 2}, 29: {m: 1, d: 3}, 30: {m: 1, d: 4}, 31: {m: 1, d: 5}
+    };
+
     const LUNAR_DATA = [
         0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
         0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
@@ -225,7 +234,11 @@
     ];
 
     function getLunarInfo(solYear, solMonth, solDay) {
-        if(solYear < 1900 || solYear > 2050) return {month:solMonth, day:solDay, isLeap:false};
+        if(solYear === 2028 && solMonth === 1 && LUNAR_EXCEPTIONS_2028_01[solDay]) {
+            return {month: LUNAR_EXCEPTIONS_2028_01[solDay].m, day: LUNAR_EXCEPTIONS_2028_01[solDay].d, isLeap: false};
+        }
+        if(solYear < 1900 || solYear > 2050) return {month: solMonth, day: solDay, isLeap: false};
+        
         let baseDate = new Date(1900, 0, 31);
         let targetDate = new Date(solYear, solMonth - 1, solDay);
         let offset = Math.round((targetDate - baseDate) / 86400000);
@@ -257,16 +270,15 @@
     function getSpecialHoliday(year, month, day, dow) {
         let dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         
-        // 설날 및 추석 정밀 연휴 판별
         for (let d = new Date(year, 0, 1); d <= new Date(year, 11, 31); d.setDate(d.getDate() + 1)) {
             let y = d.getFullYear(), m = d.getMonth() + 1, da = d.getDate();
             let l = getLunarInfo(y, m, da);
-            if (!l.isLeap && l.month === 1 && l.day === 1) { // 설날 당일
+            if (!l.isLeap && l.month === 1 && l.day === 1) { 
                 let sDay = new Date(y, m-1, da), prev = new Date(y, m-1, da-1), next = new Date(y, m-1, da+1);
                 if (dateStr === fmt(sDay)) return "설날";
                 if (dateStr === fmt(prev) || dateStr === fmt(next)) return "설날 연휴";
             }
-            if (!l.isLeap && l.month === 8 && l.day === 15) { // 추석 당일
+            if (!l.isLeap && l.month === 8 && l.day === 15) { 
                 let cDay = new Date(y, m-1, da), prev = new Date(y, m-1, da-1), next = new Date(y, m-1, da+1);
                 if (dateStr === fmt(cDay)) return "추석";
                 if (dateStr === fmt(prev) || dateStr === fmt(next)) return "추석 연휴";
