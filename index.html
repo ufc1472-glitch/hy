@@ -27,7 +27,6 @@
             background-repeat: no-repeat;
         }
 
-        /* 배경 사진이 있을 때 적용되는 어두운 필터 */
         .calendar-container::before {
             content: "";
             position: absolute;
@@ -38,7 +37,6 @@
         }
         .calendar-container.has-bg::before { display: block; }
         
-        /* 배경 사진이 있을 때 제목 및 월 이동 글자 가독성 그림자 */
         .calendar-container.has-bg .calendar-title,
         .calendar-container.has-bg .month-nav {
             color: #ffffff;
@@ -214,7 +212,15 @@
         "8-15": "광복절", "10-3": "개천절", "10-9": "한글날", "12-25": "성탄절"
     };
 
-    // 2026년 10월 천문력 기준 음력 매핑 수정 (1일 = 음력 8월 21일)
+    const LUNAR_EXCEPTIONS_2026_09 = {
+        1: {m: 7, d: 21}, 2: {m: 7, d: 22}, 3: {m: 7, d: 23}, 4: {m: 7, d: 24}, 5: {m: 7, d: 25},
+        6: {m: 7, d: 26}, 7: {m: 7, d: 27}, 8: {m: 7, d: 28}, 9: {m: 7, d: 29}, 10: {m: 7, d: 30},
+        11: {m: 8, d: 1}, 12: {m: 8, d: 2}, 13: {m: 8, d: 3}, 14: {m: 8, d: 4}, 15: {m: 8, d: 5},
+        16: {m: 8, d: 6}, 17: {m: 8, d: 7}, 18: {m: 8, d: 8}, 19: {m: 8, d: 9}, 20: {m: 8, d: 10},
+        21: {m: 8, d: 11}, 22: {m: 8, d: 12}, 23: {m: 8, d: 13}, 24: {m: 8, d: 14}, 25: {m: 8, d: 15},
+        26: {m: 8, d: 16}, 27: {m: 8, d: 17}, 28: {m: 8, d: 18}, 29: {m: 8, d: 19}, 30: {m: 8, d: 20}
+    };
+
     const LUNAR_EXCEPTIONS_2026_10 = {
         1: {m: 8, d: 21}, 2: {m: 8, d: 22}, 3: {m: 8, d: 23}, 4: {m: 8, d: 24},
         5: {m: 8, d: 25}, 6: {m: 8, d: 26}, 7: {m: 8, d: 27}, 8: {m: 8, d: 28},
@@ -255,6 +261,9 @@
     ];
 
     function getLunarInfo(solYear, solMonth, solDay) {
+        if(solYear === 2026 && solMonth === 9 && LUNAR_EXCEPTIONS_2026_09[solDay]) {
+            return {month: LUNAR_EXCEPTIONS_2026_09[solDay].m, day: LUNAR_EXCEPTIONS_2026_09[solDay].d, isLeap: false};
+        }
         if(solYear === 2026 && solMonth === 10 && LUNAR_EXCEPTIONS_2026_10[solDay]) {
             return {month: LUNAR_EXCEPTIONS_2026_10[solDay].m, day: LUNAR_EXCEPTIONS_2026_10[solDay].d, isLeap: false};
         }
