@@ -175,6 +175,14 @@
             <div class="modal-label">시간 설정</div>
             <input type="time" id="eventTime" value="09:00">
 
+            <div class="modal-label">알림 시점 선택</div>
+            <select id="alarmTiming">
+                <option value="same">당일 알림 (정각)</option>
+                <option value="1day">전일 (1일 전 알림)</option>
+                <option value="2days">전일 (2일 전 알림)</option>
+                <option value="none">알림 없음</option>
+            </select>
+
             <div style="display:flex; gap:10px; margin-top:2px;">
                 <label style="font-size:0.8rem;"><input type="radio" name="calendarType" value="solar" checked> 양력</label>
                 <label style="font-size:0.8rem;"><input type="radio" name="calendarType" value="lunar"> 음력</label>
@@ -521,8 +529,9 @@
                 evDiv.style.backgroundColor = ev.hlColor;
                 
                 let repeatIcon = ev.repeat === 'yearly' ? '🔄연' : (ev.repeat === 'monthly' ? '🔄월' : '');
+                let alarmText = ev.alarm === '1day' ? '🔔전일' : (ev.alarm === '2days' ? '🔔2일전' : (ev.alarm === 'same' ? '🔔당일' : ''));
                 
-                evDiv.innerHTML = `<span><span class="event-time">${ev.time || ''}</span>${ev.title} ${repeatIcon}</span> <button type="button" class="del-btn" onclick="deleteEvent(event, '${ev.originalDate}', ${ev.originalIndex})">✕</button>`;
+                evDiv.innerHTML = `<span><span class="event-time">${ev.time || ''}</span>${ev.title} ${alarmText} ${repeatIcon}</span> <button type="button" class="del-btn" onclick="deleteEvent(event, '${ev.originalDate}', ${ev.originalIndex})">✕</button>`;
                 cell.appendChild(evDiv);
             });
 
@@ -540,6 +549,7 @@
         selectedCellDate = dateKey; 
         document.getElementById('eventTitle').value = '';
         document.getElementById('eventTime').value = '09:00';
+        document.getElementById('alarmTiming').value = 'same';
         document.getElementById('repeatOption').value = 'none';
         document.getElementById('eventModal').style.display = 'flex'; 
     }
@@ -555,6 +565,7 @@
         const newEvent = {
             title,
             time: document.getElementById('eventTime').value,
+            alarm: document.getElementById('alarmTiming').value,
             type: document.querySelector('input[name="calendarType"]:checked').value,
             repeat: document.getElementById('repeatOption').value,
             textColor: document.getElementById('textColor').value,
